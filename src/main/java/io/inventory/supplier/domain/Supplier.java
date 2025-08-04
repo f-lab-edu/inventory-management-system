@@ -5,12 +5,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
-@AllArgsConstructor
+@SQLRestriction("is_deleted = false")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 @Builder
 @Getter
 @Table(name = "suppliers")
-@SQLRestriction("is_deleted = false")
 @Entity
 public class Supplier extends BaseEntity {
 
