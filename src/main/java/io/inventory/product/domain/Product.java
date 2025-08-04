@@ -1,4 +1,4 @@
-package io.inventory.category.domain;
+package io.inventory.product.domain;
 
 import io.inventory.common.domain.BaseEntity;
 import jakarta.persistence.*;
@@ -10,17 +10,25 @@ import org.hibernate.annotations.SQLRestriction;
 @AllArgsConstructor
 @Builder
 @Getter
-@Table(name = "categories")
+@Table(name = "products")
 @Entity
-public class Category extends BaseEntity {
+public class Product extends BaseEntity {
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
+    private Long productId;
+
+    private Long supplierId;
+
     private Long categoryId;
 
-    private Long parentCategoryId;
+    private String productCode;
 
     private String name;
+
+    private String unit;
+
+    private Integer unitPrice;
 
     private String description;
 
