@@ -1,0 +1,6 @@
+spring:
+  profiles:
+    active: local
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
