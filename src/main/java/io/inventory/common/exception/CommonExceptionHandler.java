@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class CommonExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleCustomException(CustomException e) {
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleCustomException(final CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
         log.error("[비즈니스 예외 발생] 코드: {}, 설명: {}", errorCode.name(), errorCode.getDescription());
         return ResponseEntity.status(errorCode.getStatus())
@@ -20,7 +20,7 @@ public class CommonExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleException(Exception e) {
+    public ResponseEntity<ApiResponse<ErrorResponse>> handleException(final Exception e) {
         log.error("[서버 예외 발생] 메시지: {}", e.getMessage(), e);
         return ResponseEntity.status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR));

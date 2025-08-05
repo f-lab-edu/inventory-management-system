@@ -19,7 +19,7 @@ public class WarehouseController {
     private final WarehouseCommandService warehouseCommandService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<WarehouseDetailResponse>> createWarehouse(@RequestBody WarehouseCreateRequest request) {
+    public ResponseEntity<ApiResponse<WarehouseDetailResponse>> createWarehouse(@RequestBody final WarehouseCreateRequest request) {
         return ResponseEntity.ok(
                 ApiResponse.success(warehouseCommandService.createWarehouse(request)));
     }
