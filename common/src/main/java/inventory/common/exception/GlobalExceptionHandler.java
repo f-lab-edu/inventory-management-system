@@ -19,9 +19,6 @@ import java.nio.file.AccessDeniedException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * CustomException 처리
-     */
     @ExceptionHandler(CustomException.class)
     protected ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
         log.error("커스텀 예외 발생: 예외코드={}, 메시지={}", e.getExceptionCode(), e.getMessage());
