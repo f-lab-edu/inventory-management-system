@@ -1,0 +1,614 @@
+openapi: 3.0.3
+info:
+  title: Product API
+  description: 상품 API
+  version: 1.0.0
+  contact:
+    name: 김수용
+    email: hwasuyong99@naver.com
+
+servers:
+  - url: http://localhost:10003
+    description: 로컬 개발 서버
+
+paths:
+  /api/v1/products:
+    post:
+      summary: 상품 생성
+      description: 새로운 상품을 생성합니다.
+      operationId: createProduct
+      tags:
+        - Product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+            examples:
+              createProductExample:
+                summary: 상품 생성 예시
+                value:
+                  name: "삼성 갤럭시 S24"
+                  productCode: "SAMSUNG-123"
+                  description: "스마트폰"
+                  supplierId: 1
+                  price: 1200000
+                  category: "스마트폰"
+      responses:
+        "201":
+          description: 상품이 성공적으로 생성되었습니다.
+          headers:
+            Location:
+              description: 생성된 상품의 URI
+              schema:
+                type: string
+                example: "/api/v1/products/1"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_ProductResponse"
+              examples:
+                successExample:
+                  summary: 성공 응답 예시
+                  value:
+                    status: "CREATED"
+                    message: "성공하였습니다."
+                    data:
+                      id: 1
+                      name: "삼성 갤럭시 S24"
+                      productCode: "SAMSUNG-123"
+                      description: "스마트폰"
+                      supplierId: 1
+                      supplierName: "삼성전자"
+                      price: 1200000
+                      category: "스마트폰"
+        "400":
+          description: 잘못된 요청 데이터
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_Error"
+              examples:
+                validationError:
+                  summary: 유효성 검증 오류
+                  value:
+                    status: "BAD_REQUEST"
+                    message: "입력 검증에 실패했습니다"
+                    data: null
+    get:
+      summary: 상품 목록 조회
+      description: 페이지네이션을 지원하는 상품 목록을 조회합니다.
+      operationId: searchProduct
+      tags:
+        - Product
+      parameters:
+        - name: currentPageNumber
+          in: query
+          description: 현재 페이지 번호 (0부터 시작)
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          example: 0
+        - name: pageSize
+          in: query
+          description: 페이지당 항목 수
+          required: false
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 100
+          example: 30
+      responses:
+        "200":
+          description: 상품 목록이 성공적으로 조회되었습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_PageResponse_ProductResponse"
+              examples:
+                successExample:
+                  summary: 성공 응답 예시
+                  value:
+                    status: "OK"
+                    message: "성공하였습니다."
+                    data:
+                      content:
+                        - id: 3
+                          name: "애플 맥북 프로"
+                          productCode: "APPLE-123"
+                          description: "14인치 맥북 프로"
+                          supplierId: 3
+                          supplierName: "애플"
+                          price: 3200000
+                          category: "노트북"
+                        - id: 2
+                          name: "LG OLED TV"
+                          productCode: "LG-123"
+                          description: "TV"
+                          supplierId: 2
+                          supplierName: "LG전자"
+                          price: 2500000
+                          category: "TV"
+                        - id: 1
+                          name: "삼성 갤럭시 S24"
+                          productCode: "SAMSUNG-123"
+                          description: "스마트폰"
+                          supplierId: 1
+                          supplierName: "삼성전자"
+                          price: 1200000
+                          category: "스마트폰"
+                      currentPageNumber: 0
+                      pageSize: 30
+                      totalElements: 3
+                      totalPages: 1
+                      hasNext: false
+                      hasPrevious: false
+
+  /api/v1/products/{id}:
+    get:
+      summary: 상품 상세 조회
+      description: 특정 ID의 상품 정보와 창고별 재고 정보를 조회합니다.
+      operationId: getProductDetail
+      tags:
+        - Product
+      parameters:
+        - name: id
+          in: path
+          description: 상품 ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      responses:
+        "200":
+          description: 상품 상세 정보가 성공적으로 조회되었습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_ProductDetailResponse"
+              examples:
+                successExample:
+                  summary: 성공 응답 예시
+                  value:
+                    status: "OK"
+                    message: "성공하였습니다."
+                    data:
+                      id: 1
+                      name: "삼성 갤럭시 S24"
+                      productCode: "SAMSUNG-123"
+                      description: "스마트폰"
+                      supplierId: 1
+                      supplierName: "삼성전자"
+                      price: 1200000
+                      category: "스마트폰"
+                      warehouseStocks:
+                        - warehouseId: 1
+                          warehouseName: "서울창고"
+                          quantity: 150
+                          safetyStock: 50
+                          warehouseAddress: "서울특별시 강남구 테헤란로 123"
+                        - warehouseId: 2
+                          warehouseName: "부산창고"
+                          quantity: 80
+                          safetyStock: 30
+                          warehouseAddress: "부산광역시 해운대구 해운대로 456"
+                        - warehouseId: 3
+                          warehouseName: "대구창고"
+                          quantity: 200
+                          safetyStock: 100
+                          warehouseAddress: "대구광역시 수성구 동대구로 789"
+        "404":
+          description: 상품을 찾을 수 없습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_Error"
+              examples:
+                notFoundError:
+                  summary: 리소스 없음 오류
+                  value:
+                    status: "NOT_FOUND"
+                    message: "요청한 리소스를 찾을 수 없습니다"
+                    data: null
+    put:
+      summary: 상품 정보 수정
+      description: 특정 ID의 상품 정보를 수정합니다.
+      operationId: updateProduct
+      tags:
+        - Product
+      parameters:
+        - name: id
+          in: path
+          description: 상품 ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductRequest"
+            examples:
+              updateProductExample:
+                summary: 상품 수정 예시
+                value:
+                  name: "삼성 갤럭시 S24 (수정)"
+                  price: 1300000
+                  category: "스마트폰"
+      responses:
+        "200":
+          description: 상품 정보가 성공적으로 수정되었습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_ProductResponse"
+              examples:
+                successExample:
+                  summary: 성공 응답 예시
+                  value:
+                    status: "OK"
+                    message: "성공하였습니다."
+                    data:
+                      id: 1
+                      name: "삼성 갤럭시 S24 (수정)"
+                      productCode: "SAMSUNG-123"
+                      description: "스마트폰"
+                      supplierId: 1
+                      supplierName: "삼성전자"
+                      price: 1300000
+                      category: "스마트폰"
+        "404":
+          description: 상품을 찾을 수 없습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_Error"
+              examples:
+                notFoundError:
+                  summary: 리소스 없음 오류
+                  value:
+                    status: "NOT_FOUND"
+                    message: "요청한 리소스를 찾을 수 없습니다"
+                    data: null
+    delete:
+      summary: 상품 삭제
+      description: 특정 ID의 상품을 삭제합니다.
+      operationId: deleteProduct
+      tags:
+        - Product
+      parameters:
+        - name: id
+          in: path
+          description: 상품 ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      responses:
+        "204":
+          description: 상품이 성공적으로 삭제되었습니다.
+        "404":
+          description: 상품을 찾을 수 없습니다.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse_Error"
+              examples:
+                notFoundError:
+                  summary: 리소스 없음 오류
+                  value:
+                    status: "NOT_FOUND"
+                    message: "요청한 리소스를 찾을 수 없습니다"
+                    data: null
+
+components:
+  schemas:
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - productCode
+        - description
+        - supplierId
+        - price
+      properties:
+        name:
+          type: string
+          description: 상품명
+          minLength: 1
+          maxLength: 100
+          example: "삼성 갤럭시 S24"
+        productCode:
+          type: string
+          description: 상품 코드
+          minLength: 1
+          maxLength: 50
+          example: "SAMSUNG-123"
+        description:
+          type: string
+          description: 상품 설명
+          minLength: 1
+          maxLength: 500
+          example: "스마트폰"
+        supplierId:
+          type: integer
+          format: int64
+          description: 공급업체 ID
+          minimum: 1
+          example: 1
+        price:
+          type: integer
+          format: int64
+          description: 가격
+          minimum: 1
+          example: 1200000
+        category:
+          type: string
+          description: 카테고리
+          maxLength: 20
+          example: "스마트폰"
+
+    UpdateProductRequest:
+      type: object
+      description: 모든 필드가 선택사항입니다. 전송하지 않은 필드는 기존 값이 유지됩니다.
+      properties:
+        name:
+          type: string
+          description: 상품명
+          maxLength: 100
+          example: "삼성 갤럭시 S24 (수정)"
+        productCode:
+          type: string
+          description: 상품 코드
+          maxLength: 50
+          example: "SAMSUNG-123"
+        description:
+          type: string
+          description: 상품 설명
+          maxLength: 500
+          example: "스마트폰"
+        supplierId:
+          type: integer
+          format: int64
+          description: 공급업체 ID
+          minimum: 1
+          example: 1
+        price:
+          type: integer
+          format: int64
+          description: 가격
+          minimum: 1
+          example: 1300000
+        category:
+          type: string
+          description: 카테고리
+          maxLength: 20
+          example: "스마트폰"
+        safetyStock:
+          type: integer
+          format: int64
+          description: 안전재고
+          minimum: 1
+          example: 10
+
+    ProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 상품 ID
+          example: 1
+        name:
+          type: string
+          description: 상품명
+          example: "삼성 갤럭시 S24"
+        productCode:
+          type: string
+          description: 상품 코드
+          example: "SAMSUNG-123"
+        description:
+          type: string
+          description: 상품 설명
+          example: "스마트폰"
+        supplierId:
+          type: integer
+          format: int64
+          description: 공급업체 ID
+          example: 1
+        supplierName:
+          type: string
+          description: 공급업체명
+          example: "삼성전자"
+        price:
+          type: integer
+          format: int64
+          description: 가격
+          example: 1200000
+        category:
+          type: string
+          description: 카테고리
+          example: "스마트폰"
+
+    ProductDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 상품 ID
+          example: 1
+        name:
+          type: string
+          description: 상품명
+          example: "삼성 갤럭시 S24"
+        productCode:
+          type: string
+          description: 상품 코드
+          example: "SAMSUNG-123"
+        description:
+          type: string
+          description: 상품 설명
+          example: "스마트폰"
+        supplierId:
+          type: integer
+          format: int64
+          description: 공급업체 ID
+          example: 1
+        supplierName:
+          type: string
+          description: 공급업체명
+          example: "삼성전자"
+        price:
+          type: integer
+          format: int64
+          description: 가격
+          example: 1200000
+        category:
+          type: string
+          description: 카테고리
+          example: "스마트폰"
+        warehouseStocks:
+          type: array
+          description: 창고별 재고 정보
+          items:
+            $ref: "#/components/schemas/WarehouseStockResponse"
+
+    WarehouseStockResponse:
+      type: object
+      properties:
+        warehouseId:
+          type: integer
+          format: int64
+          description: 창고 ID
+          example: 1
+        warehouseName:
+          type: string
+          description: 창고명
+          example: "서울창고"
+        quantity:
+          type: integer
+          format: int64
+          description: 현재 재고량
+          example: 150
+        safetyStock:
+          type: integer
+          format: int64
+          description: 안전재고량
+          example: 50
+        warehouseAddress:
+          type: string
+          description: 창고 주소
+          example: "서울특별시 강남구 테헤란로 123"
+
+    PageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: 페이지 내용
+          items:
+            $ref: "#/components/schemas/ProductResponse"
+        currentPageNumber:
+          type: integer
+          description: 현재 페이지 번호 (0부터 시작)
+          example: 0
+        pageSize:
+          type: integer
+          description: 페이지당 항목 수
+          example: 30
+        totalElements:
+          type: integer
+          format: int64
+          description: 전체 항목 수
+          example: 3
+        totalPages:
+          type: integer
+          description: 전체 페이지 수
+          example: 1
+        hasNext:
+          type: boolean
+          description: 다음 페이지 존재 여부
+          example: false
+        hasPrevious:
+          type: boolean
+          description: 이전 페이지 존재 여부
+          example: false
+
+    ApiResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: HTTP 상태
+          example: "OK"
+        message:
+          type: string
+          description: 응답 메시지
+          example: "성공하였습니다."
+        data:
+          description: 응답 데이터
+
+    ApiResponse_ProductResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ProductResponse"
+
+    ApiResponse_ProductDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ProductDetailResponse"
+
+    ApiResponse_PageResponse_ProductResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/PageResponse"
+
+    ApiResponse_Error:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            status:
+              type: string
+              description: HTTP 상태 코드
+              example: "BAD_REQUEST"
+            message:
+              type: string
+              description: 에러 메시지
+              example: "입력 검증에 실패했습니다"
+            data:
+              nullable: true
+              description: 에러 시에는 항상 null
+              example: null
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Product
+    description: 상품 관리 API
