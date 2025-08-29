@@ -1,1 +1,11 @@
 rootProject.name = 'inventory'
+
+include 'common'
+
+include 'service'
+include 'service:product'
+include 'service:supplier'
+include 'service:user'
+include 'service:warehouse'
+include 'service:stock'
+include 'service:notification'
