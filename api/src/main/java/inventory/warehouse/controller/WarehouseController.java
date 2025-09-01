@@ -26,8 +26,8 @@ import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 @RestController
 public class WarehouseController {
 
-    private static final AtomicLong ID_GENERATOR = new AtomicLong(1);
-    private static final Map<Long, WarehouseResponse> WAREHOUSE_STORE = new ConcurrentHashMap<>();
+    static final AtomicLong ID_GENERATOR = new AtomicLong(1);
+    static final Map<Long, WarehouseResponse> WAREHOUSE_STORE = new ConcurrentHashMap<>();
 
     private static final String DEFAULT_PAGE_NUMBER = "0";
     private static final String DEFAULT_PAGE_SIZE = "10";
@@ -122,4 +122,6 @@ public class WarehouseController {
 
         return ResponseEntity.noContent().build();
     }
+
+
 }
