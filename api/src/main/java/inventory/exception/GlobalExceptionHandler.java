@@ -1,6 +1,6 @@
-package inventory.common.exception;
+package inventory.exception;
 
-import inventory.common.api.ApiResponse;
+import inventory.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;

@@ -1,4 +1,4 @@
-package inventory.common.exception;
+package inventory.exception;
 
 import lombok.Getter;
 
@@ -6,18 +6,18 @@ import lombok.Getter;
 public class CustomException extends RuntimeException {
     
     private final ExceptionCode exceptionCode;
-    
-    public CustomException(ExceptionCode exceptionCode) {
+
+    public CustomException(final ExceptionCode exceptionCode) {
         super(exceptionCode.getMessage());
         this.exceptionCode = exceptionCode;
     }
-    
-    public CustomException(ExceptionCode exceptionCode, String message) {
+
+    public CustomException(final ExceptionCode exceptionCode, String message) {
         super(message);
         this.exceptionCode = exceptionCode;
     }
-    
-    public CustomException(ExceptionCode exceptionCode, String message, Throwable cause) {
+
+    public CustomException(final ExceptionCode exceptionCode, String message, Throwable cause) {
         super(message, cause);
         this.exceptionCode = exceptionCode;
     }

@@ -1,4 +1,4 @@
-package inventory.common.exception;
+package inventory.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,7 +30,12 @@ public enum ExceptionCode {
     
     // 비즈니스 로직 관련
     INVALID_STATE(HttpStatus.BAD_REQUEST, "잘못된 상태입니다"),
-    OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "작업에 실패했습니다");
+    OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "작업에 실패했습니다"),
+    
+    // 입고 관련
+    INVALID_STATUS_TRANSITION(HttpStatus.BAD_REQUEST, "잘못된 상태 전환입니다"),
+    INBOUND_COMPLETED(HttpStatus.BAD_REQUEST, "입고 완료된 건은 수정할 수 없습니다"),
+    INBOUND_NOT_DELETABLE(HttpStatus.BAD_REQUEST, "입고 완료된 건은 삭제할 수 없습니다");
 
     private final HttpStatus httpStatus;
     private final String message;

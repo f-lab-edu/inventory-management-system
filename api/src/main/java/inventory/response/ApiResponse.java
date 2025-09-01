@@ -1,6 +1,6 @@
-package inventory.common.api;
+package inventory.response;
 
-import inventory.common.exception.ExceptionCode;
+import inventory.exception.ExceptionCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
