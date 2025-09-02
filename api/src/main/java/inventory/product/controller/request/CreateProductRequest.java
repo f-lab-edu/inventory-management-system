@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateProductRequest(
-        @NotNull(message = "공급업체는 필수입니다")
+        @NotNull(message = "공급업체 ID는 필수입니다")
         Long supplierId,
 
         @NotBlank(message = "상품명은 필수입니다")

@@ -26,8 +26,8 @@ import static inventory.supplier.controller.SupplierController.SUPPLIER_STORE;
 @RestController
 public class ProductController {
     
-    static final AtomicLong ID_GENERATOR = new AtomicLong();
-    static final Map<Long, ProductResponse> PRODUCT_STORE = new ConcurrentHashMap<>();
+    public static final AtomicLong ID_GENERATOR = new AtomicLong();
+    public static final Map<Long, ProductResponse> PRODUCT_STORE = new ConcurrentHashMap<>();
 
     private static final String DEFAULT_PAGE_NUMBER = "0";
     private static final String DEFAULT_PAGE_SIZE = "50";
@@ -91,7 +91,6 @@ public class ProductController {
 
         Optional.ofNullable(SUPPLIER_STORE.get(foundProduct.supplierId()))
                 .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
-
 
         return ResponseEntity.ok(ApiResponse.success(foundProduct));
     }

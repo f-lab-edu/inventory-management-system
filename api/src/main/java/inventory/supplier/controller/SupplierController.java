@@ -25,7 +25,7 @@ import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 @RestController
 public class SupplierController {
 
-    static final AtomicLong ID_GENERATOR = new AtomicLong();
+    public static final AtomicLong ID_GENERATOR = new AtomicLong();
     public static final Map<Long, SupplierResponse> SUPPLIER_STORE = new ConcurrentHashMap<>();
 
     private static final String DEFAULT_PAGE_NUMBER = "0";
