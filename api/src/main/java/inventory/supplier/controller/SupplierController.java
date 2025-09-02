@@ -1,11 +1,11 @@
 package inventory.supplier.controller;
 
-import inventory.supplier.controller.request.CreateSupplierRequest;
-import inventory.supplier.controller.request.UpdateSupplierRequest;
-import inventory.supplier.controller.response.SupplierResponse;
 import inventory.exception.CustomException;
 import inventory.response.ApiResponse;
 import inventory.response.PageResponse;
+import inventory.supplier.controller.request.CreateSupplierRequest;
+import inventory.supplier.controller.request.UpdateSupplierRequest;
+import inventory.supplier.controller.response.SupplierResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +25,22 @@ import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 @RestController
 public class SupplierController {
 
-    static final AtomicLong ID_GENERATOR = new AtomicLong(1);
-    static final Map<Long, SupplierResponse> SUPPLIER_STORE = new ConcurrentHashMap<>();
+    static final AtomicLong ID_GENERATOR = new AtomicLong();
+    public static final Map<Long, SupplierResponse> SUPPLIER_STORE = new ConcurrentHashMap<>();
 
     private static final String DEFAULT_PAGE_NUMBER = "0";
     private static final String DEFAULT_PAGE_SIZE = "30";
+
+    static {
+        for (long i = 0; i < 10; i++) {
+            createSupplier(i);
+        }
+    }
+
+    private static void createSupplier(long i) {
+        long key = ID_GENERATOR.getAndIncrement();
+        SUPPLIER_STORE.put(key, SupplierResponse.of(key, "공급업체" + i, "123456789" + i, "12345", "서울특별시 어딘가", "삼성전자 타워 어딘가", "대표" + i, "담당" + i, "01012345678", LocalDateTime.now(), LocalDateTime.now()));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(@Valid @RequestBody final CreateSupplierRequest request) {
