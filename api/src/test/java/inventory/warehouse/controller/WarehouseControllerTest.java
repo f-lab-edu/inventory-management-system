@@ -2,7 +2,7 @@ package inventory.warehouse.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
-import inventory.exception.GlobalExceptionHandler;
+import inventory.common.exception.GlobalExceptionHandler;
 import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
 import org.junit.jupiter.api.BeforeEach;

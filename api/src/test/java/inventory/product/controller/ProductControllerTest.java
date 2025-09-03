@@ -2,7 +2,7 @@ package inventory.product.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
-import inventory.exception.GlobalExceptionHandler;
+import inventory.common.exception.GlobalExceptionHandler;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
 import inventory.supplier.controller.SupplierController;

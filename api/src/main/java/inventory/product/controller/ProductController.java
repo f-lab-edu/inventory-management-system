@@ -1,12 +1,12 @@
 package inventory.product.controller;
 
-import inventory.exception.CustomException;
-import inventory.exception.ExceptionCode;
+import inventory.common.exception.CustomException;
+import inventory.common.exception.ExceptionCode;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
 import inventory.product.controller.response.ProductResponse;
-import inventory.response.ApiResponse;
-import inventory.response.PageResponse;
+import inventory.common.dto.response.ApiResponse;
+import inventory.common.dto.response.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
+import static inventory.common.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 import static inventory.supplier.controller.SupplierController.SUPPLIER_STORE;
 
 @RequestMapping("/api/v1/products")

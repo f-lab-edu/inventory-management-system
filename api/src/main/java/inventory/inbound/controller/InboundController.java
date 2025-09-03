@@ -1,14 +1,14 @@
 package inventory.inbound.controller;
 
-import inventory.exception.CustomException;
-import inventory.exception.ExceptionCode;
+import inventory.common.exception.CustomException;
+import inventory.common.exception.ExceptionCode;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.controller.response.InboundResponse;
 import inventory.inbound.controller.response.WarehouseProductResponse;
 import inventory.inbound.enums.InboundStatus;
-import inventory.response.ApiResponse;
-import inventory.response.PageResponse;
+import inventory.common.dto.response.ApiResponse;
+import inventory.common.dto.response.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +18,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
+import static inventory.common.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 import static inventory.product.controller.ProductController.PRODUCT_STORE;
 import static inventory.supplier.controller.SupplierController.SUPPLIER_STORE;
 import static inventory.warehouse.controller.WarehouseController.WAREHOUSE_STORE;

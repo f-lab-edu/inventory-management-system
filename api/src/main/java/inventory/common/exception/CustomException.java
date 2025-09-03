@@ -1,4 +1,4 @@
-package inventory.exception;
+package inventory.common.exception;
 
 import lombok.Getter;
 

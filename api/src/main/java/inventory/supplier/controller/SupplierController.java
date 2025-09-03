@@ -1,8 +1,8 @@
 package inventory.supplier.controller;
 
-import inventory.exception.CustomException;
-import inventory.response.ApiResponse;
-import inventory.response.PageResponse;
+import inventory.common.exception.CustomException;
+import inventory.common.dto.response.ApiResponse;
+import inventory.common.dto.response.PageResponse;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
 import inventory.supplier.controller.response.SupplierResponse;
@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
+import static inventory.common.exception.ExceptionCode.RESOURCE_NOT_FOUND;
 
 @RequestMapping("/api/v1/suppliers")
 @RestController
