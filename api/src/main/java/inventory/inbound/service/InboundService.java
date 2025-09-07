@@ -1,0 +1,97 @@
+package inventory.inbound.service;
+
+import inventory.common.exception.CustomException;
+import inventory.common.exception.ExceptionCode;
+import inventory.inbound.controller.request.CreateInboundRequest;
+import inventory.inbound.controller.request.UpdateInboundStatusRequest;
+import inventory.inbound.domain.Inbound;
+import inventory.inbound.domain.InboundProduct;
+import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.repository.InboundRepository;
+import inventory.product.repository.ProductRepository;
+import inventory.supplier.repository.SupplierRepository;
+import inventory.warehouse.repository.WarehouseRepository;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@RequiredArgsConstructor
+@Service
+public class InboundService {
+
+    private final InboundRepository inboundRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final SupplierRepository supplierRepository;
+    private final ProductRepository productRepository;
+
+    public Inbound save(CreateInboundRequest request) {
+        warehouseRepository.findById(request.warehouseId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        supplierRepository.findById(request.supplierId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        request.products().forEach(productRequest -> {
+            productRepository.findById(productRequest.productId())
+                    .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        });
+
+        List<InboundProduct> inboundProducts = request.products().stream()
+                .map(InboundProduct::from)
+                .toList();
+
+        Inbound inbound = Inbound.builder()
+                .warehouseId(request.warehouseId())
+                .supplierId(request.supplierId())
+                .expectedDate(request.expectedDate())
+                .products(inboundProducts)
+                .status(InboundStatus.REGISTERED)
+                .build();
+
+        return inboundRepository.save(inbound);
+    }
+
+    public Inbound findById(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        return inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    }
+
+    public List<Inbound> findAll() {
+        return inboundRepository.findAll();
+    }
+
+    public Inbound updateStatus(Long id, UpdateInboundStatusRequest request) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Inbound existingInbound = findById(id);
+
+        Inbound updatedInbound = Inbound.builder()
+                .inboundId(id)
+                .warehouseId(existingInbound.getWarehouseId()) // 업데이트하지 않음
+                .supplierId(existingInbound.getSupplierId()) // 업데이트하지 않음
+                .expectedDate(existingInbound.getExpectedDate()) // 업데이트하지 않음
+                .products(existingInbound.getProducts()) // 업데이트하지 않음
+                .status(request.status())
+                .build();
+
+        return inboundRepository.save(updatedInbound);
+    }
+
+    public void deleteById(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        if (!inboundRepository.findById(id).isPresent()) {
+            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
+        }
+
+        inboundRepository.deleteById(id);
+    }
+}

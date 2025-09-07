@@ -1,5 +1,13 @@
 package inventory.product.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import inventory.common.exception.GlobalExceptionHandler;
@@ -7,6 +15,8 @@ import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
 import inventory.supplier.controller.SupplierController;
 import inventory.supplier.controller.response.SupplierResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,14 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ProductController.class)
 @Import(GlobalExceptionHandler.class)
@@ -46,15 +48,13 @@ class ProductControllerTest {
         ProductController.PRODUCT_STORE.clear();
         ProductController.ID_GENERATOR.set(1);
         SupplierController.SUPPLIER_STORE.clear();
-
-        // 테스트용 공급업체 데이터 직접 생성
         createTestSupplier();
     }
 
     private void createTestSupplier() {
         testSupplierId = 1L;
         testSupplierName = "테스트 공급업체";
-        
+
         SupplierResponse supplierResponse = SupplierResponse.of(
                 testSupplierId,
                 testSupplierName,
@@ -68,7 +68,7 @@ class ProductControllerTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
-        
+
         SupplierController.SUPPLIER_STORE.put(testSupplierId, supplierResponse);
     }
 
@@ -111,8 +111,8 @@ class ProductControllerTest {
         );
 
         mockMvc.perform(post(BASE_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
     }
 
@@ -130,8 +130,8 @@ class ProductControllerTest {
             );
 
             mockMvc.perform(post(BASE_URL)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk());
         }
 
@@ -272,8 +272,8 @@ class ProductControllerTest {
         );
 
         mockMvc.perform(post(BASE_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.thumbnailUrl").value("DEFAULT"));
     }
