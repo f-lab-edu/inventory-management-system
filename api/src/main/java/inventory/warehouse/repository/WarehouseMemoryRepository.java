@@ -3,16 +3,19 @@ package inventory.warehouse.repository;
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.warehouse.domain.Warehouse;
+import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.stereotype.Repository;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
 public class WarehouseMemoryRepository implements WarehouseRepository {
 
     private final Map<Long, Warehouse> store = new ConcurrentHashMap<>();
+    private final AtomicLong autoIncrementId = new AtomicLong();
 
     @Override
     public Warehouse save(Warehouse warehouse) {
@@ -20,27 +23,23 @@ public class WarehouseMemoryRepository implements WarehouseRepository {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        return store.put(warehouse.getWarehouseId(), warehouse);
+        long key = warehouse.getWarehouseId() == null ? this.autoIncrementId.getAndIncrement() : warehouse.getWarehouseId();
+
+        return store.put(key, warehouse);
     }
 
     @Override
     public Optional<Warehouse> findById(Long id) {
-        if (id == null) {
-            return Optional.empty();
-        }
-        return Optional.ofNullable(store.get(id));
+        return Optional.empty();
     }
 
     @Override
     public List<Warehouse> findAll() {
-        return List.copyOf(store.values());
+        return List.of();
     }
 
     @Override
     public void deleteById(Long id) {
-        if (id == null) {
-            throw new CustomException(ExceptionCode.INVALID_INPUT);
-        }
-        store.remove(id);
+
     }
 }
