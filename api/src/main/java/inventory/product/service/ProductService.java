@@ -55,12 +55,11 @@ public class ProductService {
 
         Product updatedProduct = Product.builder()
                 .productId(id)
-                .supplierId(existingProduct.getSupplierId()) // 업데이트하지 않음
-                .productCode(existingProduct.getProductCode()) // 업데이트하지 않음
-                .unit(existingProduct.getUnit()) // 업데이트하지 않음
+                .supplierId(existingProduct.getSupplierId())
+                .productCode(existingProduct.getProductCode())
+                .unit(existingProduct.getUnit())
                 .productName(request.productName() != null ? request.productName() : existingProduct.getProductName())
-                .thumbnailUrl(
-                        request.thumbnailUrl() != null ? request.thumbnailUrl() : existingProduct.getThumbnailUrl())
+                .thumbnailUrl(request.thumbnailUrl())
                 .active(request.active())
                 .build();
 

@@ -9,6 +9,7 @@ import lombok.Getter;
 public class Product {
 
     private static final AtomicLong ID_GENERATOR = new AtomicLong();
+    public static final String THUMBNAIL_DEFAULT_PNG = "thumbnail/default.png";
 
     private Long productId;
 
@@ -32,7 +33,7 @@ public class Product {
         this.productName = productName;
         this.productCode = productCode;
         this.unit = unit;
-        this.thumbnailUrl = thumbnailUrl;
+        this.thumbnailUrl = thumbnailUrl != null ? thumbnailUrl : THUMBNAIL_DEFAULT_PNG;
         this.active = active;
     }
 
