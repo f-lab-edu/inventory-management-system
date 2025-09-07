@@ -1,4 +1,4 @@
-package inventory.response;
+package inventory.common.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

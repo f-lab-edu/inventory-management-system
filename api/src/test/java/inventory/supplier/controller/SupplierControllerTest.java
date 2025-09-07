@@ -2,7 +2,7 @@ package inventory.supplier.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
-import inventory.exception.GlobalExceptionHandler;
+import inventory.common.exception.GlobalExceptionHandler;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
 import org.junit.jupiter.api.BeforeEach;
