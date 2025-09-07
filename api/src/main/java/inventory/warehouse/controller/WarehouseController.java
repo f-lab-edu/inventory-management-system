@@ -1,127 +1,87 @@
 package inventory.warehouse.controller;
 
-import inventory.common.exception.CustomException;
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
 import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
 import inventory.warehouse.controller.response.WarehouseResponse;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.service.WarehouseService;
 import jakarta.validation.Valid;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static inventory.common.exception.ExceptionCode.RESOURCE_NOT_FOUND;
-
-
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/warehouses")
 @RestController
 public class WarehouseController {
 
-    public static final AtomicLong ID_GENERATOR = new AtomicLong(1);
-    public static final Map<Long, WarehouseResponse> WAREHOUSE_STORE = new ConcurrentHashMap<>();
-
-    private static final String DEFAULT_PAGE_NUMBER = "0";
-    private static final String DEFAULT_PAGE_SIZE = "10";
+    private final WarehouseService warehouseService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(@Valid @RequestBody final CreateWarehouseRequest request) {
-        Long id = ID_GENERATOR.getAndIncrement();
-
-        WarehouseResponse warehouse = WarehouseResponse.of(
-                id,
-                request.name(),
-                request.postcode(),
-                request.baseAddress(),
-                request.detailAddress(),
-                request.managerName(),
-                request.managerContact(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
-
-        WAREHOUSE_STORE.put(id, warehouse);
+    public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(
+            @Valid @RequestBody CreateWarehouseRequest request) {
+        Warehouse savedWarehouse = warehouseService.save(request);
+        WarehouseResponse response = WarehouseResponse.from(savedWarehouse);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, warehouse));
+                .body(ApiResponse.success(HttpStatus.CREATED, response));
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<ApiResponse<WarehouseResponse>> getWarehouse(@PathVariable Long id) {
+        Warehouse warehouse = warehouseService.findById(id);
+        WarehouseResponse response = WarehouseResponse.from(warehouse);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<WarehouseResponse>>> searchWarehouse(
-            @RequestParam(defaultValue = DEFAULT_PAGE_NUMBER) final int currentPageNumber,
-            @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) final int pageSize
-    ) {
-        List<WarehouseResponse> allWarehouses = WAREHOUSE_STORE.values().stream()
-                .sorted(Comparator.comparing(WarehouseResponse::createdAt).reversed())
+            @RequestParam(defaultValue = "0") int currentPageNumber,
+            @RequestParam(defaultValue = "10") int pageSize) {
+
+        List<Warehouse> warehouses = warehouseService.findAll();
+
+        int startIndex = currentPageNumber * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, warehouses.size());
+        List<Warehouse> pagedWarehouses = warehouses.subList(startIndex, endIndex);
+
+        List<WarehouseResponse> responses = pagedWarehouses.stream()
+                .map(WarehouseResponse::from)
                 .toList();
 
-        long totalElements = allWarehouses.size();
-        int startIndex = currentPageNumber * pageSize;
-        int endIndex = Math.min(startIndex + pageSize, allWarehouses.size());
-
-        List<WarehouseResponse> pagedWarehouses = allWarehouses.subList(startIndex, endIndex);
-
         PageResponse<WarehouseResponse> pageResponse = PageResponse.of(
-                pagedWarehouses,
-                currentPageNumber,
-                pageSize,
-                totalElements
-        );
+                responses, currentPageNumber, pageSize, warehouses.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
-    @GetMapping("{id}")
-    public ResponseEntity<ApiResponse<WarehouseResponse>> getWarehouse(@PathVariable final Long id) {
-        WarehouseResponse foundWarehouse = Optional.ofNullable(WAREHOUSE_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
-
-        return ResponseEntity.ok(ApiResponse.success(foundWarehouse));
-    }
-
     @PutMapping("{id}")
     public ResponseEntity<ApiResponse<WarehouseResponse>> updateWarehouse(
-            @PathVariable final Long id,
-            @RequestBody final UpdateWarehouseRequest request
-    ) {
-        WarehouseResponse foundWarehouse = Optional.ofNullable(WAREHOUSE_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateWarehouseRequest request) {
 
-        WarehouseResponse updatedWarehouse = WarehouseResponse.of(
-                id,
-                request.name() != null ? request.name() : foundWarehouse.name(),
-                request.postcode() != null ? request.postcode() : foundWarehouse.postcode(),
-                request.baseAddress() != null ? request.baseAddress() : foundWarehouse.baseAddress(),
-                request.detailAddress() != null ? request.detailAddress() : foundWarehouse.detailAddress(),
-                request.managerName() != null ? request.managerName() : foundWarehouse.managerName(),
-                request.managerContact() != null ? request.managerContact() : foundWarehouse.managerContact(),
-                foundWarehouse.createdAt(),
-                LocalDateTime.now()
-        );
+        Warehouse updatedWarehouse = warehouseService.update(id, request);
+        WarehouseResponse response = WarehouseResponse.from(updatedWarehouse);
 
-        WAREHOUSE_STORE.put(id, updatedWarehouse);
-
-        return ResponseEntity.ok(ApiResponse.success(updatedWarehouse));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(@PathVariable final Long id) {
-        if (!WAREHOUSE_STORE.containsKey(id)) {
-            throw new CustomException(RESOURCE_NOT_FOUND);
-        }
-
-        WAREHOUSE_STORE.remove(id);
-
+    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(@PathVariable Long id) {
+        warehouseService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-
-
 }

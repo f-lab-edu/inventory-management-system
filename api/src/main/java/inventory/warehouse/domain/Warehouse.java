@@ -1,10 +1,9 @@
 package inventory.warehouse.domain;
 
-import lombok.Builder;
-import lombok.Getter;
-
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import lombok.Builder;
+import lombok.Getter;
 
 @Getter
 public class Warehouse {
