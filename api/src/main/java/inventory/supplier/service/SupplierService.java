@@ -53,8 +53,8 @@ public class SupplierService {
 
         Supplier updatedSupplier = Supplier.builder()
                 .supplierId(id)
-                .name(existingSupplier.getName()) // 업데이트하지 않음
-                .businessRegistrationNumber(existingSupplier.getBusinessRegistrationNumber()) // 업데이트하지 않음
+                .name(existingSupplier.getName())
+                .businessRegistrationNumber(existingSupplier.getBusinessRegistrationNumber())
                 .postcode(request.postcode() != null ? request.postcode() : existingSupplier.getPostcode())
                 .baseAddress(request.baseAddress() != null ? request.baseAddress() : existingSupplier.getBaseAddress())
                 .detailAddress(request.detailAddress() != null ? request.detailAddress()

@@ -1,139 +1,83 @@
 package inventory.supplier.controller;
 
-import inventory.common.exception.CustomException;
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
 import inventory.supplier.controller.response.SupplierResponse;
+import inventory.supplier.domain.Supplier;
+import inventory.supplier.service.SupplierService;
 import jakarta.validation.Valid;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static inventory.common.exception.ExceptionCode.RESOURCE_NOT_FOUND;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RequestMapping("/api/v1/suppliers")
 @RestController
+@RequiredArgsConstructor
 public class SupplierController {
 
-    public static final AtomicLong ID_GENERATOR = new AtomicLong();
-    public static final Map<Long, SupplierResponse> SUPPLIER_STORE = new ConcurrentHashMap<>();
-
-    private static final String DEFAULT_PAGE_NUMBER = "0";
-    private static final String DEFAULT_PAGE_SIZE = "30";
-
-    static {
-        for (long i = 0; i < 10; i++) {
-            createSupplier(i);
-        }
-    }
-
-    private static void createSupplier(long i) {
-        long key = ID_GENERATOR.getAndIncrement();
-        SUPPLIER_STORE.put(key, SupplierResponse.of(key, "공급업체" + i, "123456789" + i, "12345", "서울특별시 어딘가", "삼성전자 타워 어딘가", "대표" + i, "담당" + i, "01012345678", LocalDateTime.now(), LocalDateTime.now()));
-    }
+    private final SupplierService supplierService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(@Valid @RequestBody final CreateSupplierRequest request) {
-        Long id = ID_GENERATOR.getAndIncrement();
-
-        SupplierResponse createdSupplier = SupplierResponse.of(
-                id,
-                request.name(),
-                request.businessRegistrationNumber(),
-                request.postcode(),
-                request.baseAddress(),
-                request.detailAddress(),
-                request.ceoName(),
-                request.managerName(),
-                request.managerContact(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
-
-        SUPPLIER_STORE.put(id, createdSupplier);
+    public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(
+            @Valid @RequestBody CreateSupplierRequest request) {
+        Supplier savedSupplier = supplierService.save(request);
+        SupplierResponse response = SupplierResponse.from(savedSupplier);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, createdSupplier));
+                .body(ApiResponse.success(HttpStatus.CREATED, response));
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<ApiResponse<SupplierResponse>> getSupplier(@PathVariable Long id) {
+        Supplier supplier = supplierService.findById(id);
+        SupplierResponse response = SupplierResponse.from(supplier);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<SupplierResponse>>> searchSupplier(
-            @RequestParam(defaultValue = DEFAULT_PAGE_NUMBER) final int currentPageNumber,
-            @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) final int pageSize
-    ) {
-        List<SupplierResponse> suppliers = SUPPLIER_STORE.values().stream()
-                .sorted(Comparator.comparing(SupplierResponse::createdAt).reversed())
-                .toList();
+            @RequestParam(defaultValue = "0") int currentPageNumber, @RequestParam(defaultValue = "30") int pageSize) {
 
-        long totalElements = suppliers.size();
+        List<Supplier> suppliers = supplierService.findAll();
+
         int startIndex = currentPageNumber * pageSize;
         int endIndex = Math.min(startIndex + pageSize, suppliers.size());
+        List<Supplier> pagedSuppliers = suppliers.subList(startIndex, endIndex);
 
-        List<SupplierResponse> pagedSuppliers = suppliers.subList(startIndex, endIndex);
+        List<SupplierResponse> responses = pagedSuppliers.stream().map(SupplierResponse::from).toList();
 
-        PageResponse<SupplierResponse> pageResponse = PageResponse.of(
-                pagedSuppliers,
-                currentPageNumber,
-                pageSize,
-                totalElements
-        );
+        PageResponse<SupplierResponse> pageResponse = PageResponse.of(responses, currentPageNumber, pageSize,
+                suppliers.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
-    @GetMapping("{id}")
-    public ResponseEntity<ApiResponse<SupplierResponse>> getSupplier(@PathVariable final Long id) {
-        SupplierResponse foundSupplier = Optional.ofNullable(SUPPLIER_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
-
-        return ResponseEntity.ok(ApiResponse.success(foundSupplier));
-    }
-
     @PutMapping("{id}")
-    public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(
-            @PathVariable final Long id,
-            @Valid @RequestBody final UpdateSupplierRequest request
-    ) {
-        SupplierResponse foundSupplier = Optional.ofNullable(SUPPLIER_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
+    public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(@PathVariable Long id,
+                                                                        @Valid @RequestBody UpdateSupplierRequest request) {
 
-        SupplierResponse updatedSupplier = SupplierResponse.of(
-                id,
-                foundSupplier.name(),
-                foundSupplier.businessRegistrationNumber(),
-                request.postcode() != null ? request.postcode() : foundSupplier.postcode(),
-                request.baseAddress() != null ? request.baseAddress() : foundSupplier.baseAddress(),
-                request.detailAddress() != null ? request.detailAddress() : foundSupplier.detailAddress(),
-                request.ceoName() != null ? request.ceoName() : foundSupplier.ceoName(),
-                request.managerName() != null ? request.managerName() : foundSupplier.managerName(),
-                request.managerContact() != null ? request.managerContact() : foundSupplier.managerContact(),
-                foundSupplier.createdAt(),
-                LocalDateTime.now()
-        );
+        Supplier updatedSupplier = supplierService.update(id, request);
+        SupplierResponse response = SupplierResponse.from(updatedSupplier);
 
-        SUPPLIER_STORE.put(id, updatedSupplier);
-
-        return ResponseEntity.ok(ApiResponse.success(updatedSupplier));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteSupplier(@PathVariable final Long id) {
-        if (!SUPPLIER_STORE.containsKey(id)) {
-            throw new CustomException(RESOURCE_NOT_FOUND);
-        }
-
-        SUPPLIER_STORE.remove(id);
-
+    public ResponseEntity<ApiResponse<Void>> deleteSupplier(@PathVariable Long id) {
+        supplierService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }
