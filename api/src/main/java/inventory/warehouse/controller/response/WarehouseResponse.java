@@ -1,5 +1,6 @@
 package inventory.warehouse.controller.response;
 
+import inventory.warehouse.domain.Warehouse;
 import java.time.LocalDateTime;
 
 public record WarehouseResponse(
@@ -25,5 +26,19 @@ public record WarehouseResponse(
             final LocalDateTime modifiedAt
     ) {
         return new WarehouseResponse(id, name, postcode, baseAddress, detailAddress, managerName, managerContact, createdAt, modifiedAt);
+    }
+
+    public static WarehouseResponse from(Warehouse warehouse) {
+        return new WarehouseResponse(
+                warehouse.getWarehouseId(),
+                warehouse.getName(),
+                warehouse.getPostcode(),
+                warehouse.getBaseAddress(),
+                warehouse.getDetailAddress(),
+                warehouse.getManagerName(),
+                warehouse.getManagerContact(),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 }
