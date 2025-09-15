@@ -64,7 +64,6 @@ class InboundServiceTest {
         );
 
         Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
                 .name("테스트 창고")
                 .postcode("12345")
                 .baseAddress("서울시 어딘가")
@@ -180,7 +179,6 @@ class InboundServiceTest {
         );
 
         Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
                 .name("테스트 창고")
                 .postcode("12345")
                 .baseAddress("서울시 어딘가")
@@ -213,7 +211,6 @@ class InboundServiceTest {
         );
 
         Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
                 .name("테스트 창고")
                 .postcode("12345")
                 .baseAddress("서울시 어딘가")
