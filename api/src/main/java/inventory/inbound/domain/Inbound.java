@@ -1,19 +1,27 @@
 package inventory.inbound.domain;
 
 import inventory.inbound.enums.InboundStatus;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@Entity
 public class Inbound {
 
-    private static final AtomicLong ID_GENERATOR = new AtomicLong();
-
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long inboundId;
 
     private Long warehouseId;
@@ -22,19 +30,24 @@ public class Inbound {
 
     private LocalDate expectedDate;
 
+    @ElementCollection
     private List<InboundProduct> products;
 
     private InboundStatus status;
 
     @Builder
-    public Inbound(Long inboundId, Long warehouseId, Long supplierId, LocalDate expectedDate,
+    public Inbound(Long warehouseId, Long supplierId, LocalDate expectedDate,
                    List<InboundProduct> products, InboundStatus status) {
-        this.inboundId = inboundId != null ? inboundId : ID_GENERATOR.getAndIncrement();
         this.warehouseId = warehouseId;
         this.supplierId = supplierId;
         this.expectedDate = expectedDate;
         this.products = products;
         this.status = status != null ? status : InboundStatus.REGISTERED;
+    }
+
+    public Inbound updateStatus(Inbound newInbound) {
+        this.status = newInbound.status;
+        return this;
     }
 
     @Override
