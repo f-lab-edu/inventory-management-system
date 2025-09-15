@@ -84,7 +84,6 @@ class InboundServiceTest {
                 .build();
 
         Product product1 = Product.builder()
-                .productId(1L)
                 .supplierId(1L)
                 .productName("상품1")
                 .productCode("PROD001")
@@ -94,7 +93,6 @@ class InboundServiceTest {
                 .build();
 
         Product product2 = Product.builder()
-                .productId(2L)
                 .supplierId(1L)
                 .productName("상품2")
                 .productCode("PROD002")
