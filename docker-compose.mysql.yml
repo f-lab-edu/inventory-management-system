@@ -1,0 +1,60 @@
+services:
+  mysql:
+    image: mysql:8.4.3
+    container_name: inventory-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE_NAME}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    ports:
+      - "3306:3306"
+    # 볼륨 마운트 설정
+    volumes:
+      # MySQL 데이터 영구 저장
+      - inveni-mysql-data:/var/lib/mysql
+      # MySQL 설정 파일 마운트
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d
+      # 초기화 스크립트 마운트
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    # 네트워크 설정
+    networks:
+      - inventory-network
+    # 헬스체크 설정
+    healthcheck:
+      # MySQL 연결 테스트 명령어
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
+      # 재시도 간격 (30초)
+      interval: 30s
+      # 타임아웃 (10초)
+      timeout: 10s
+      # 재시도 횟수 (3회)
+      retries: 3
+      # 시작 대기 시간 (60초)
+      start_period: 60s
+
+# 볼륨 정의
+volumes:
+  # MySQL 데이터 영구 저장 볼륨
+  inveni-mysql-data:
+    # 로컬 드라이버 사용
+    driver: local
+
+# 네트워크 정의
+networks:
+  # 인벤토리 네트워크 생성
+  inventory-network:
+    # 브리지 드라이버 사용 (기본값)
+    driver: bridge

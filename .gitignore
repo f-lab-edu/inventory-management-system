@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+## 설정 파일
+.env
+.env.local
+.env.*.local
+**/.env
+**/logs/**

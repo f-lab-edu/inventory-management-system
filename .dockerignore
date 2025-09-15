@@ -1,0 +1,60 @@
+# Docker 빌드 시 제외할 파일들
+
+# Git 관련 파일
+.git
+.gitignore
+
+# IDE 관련 파일
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+
+# 빌드 결과물
+build/
+target/
+out/
+# JAR 파일 제외 (단, gradle-wrapper.jar는 포함)
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.ear
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS 관련 파일
+.DS_Store
+Thumbs.db
+
+# Node.js 관련 (만약 있다면)
+node_modules/
+npm-debug.log*
+
+# Docker 관련 파일
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# buildSrc는 빌드에 필요하므로 포함
+!buildSrc/
+
+# 문서 파일
+*.md
+docs/
+
+# 테스트 결과
+test-results/
+reports/
+
+# Gradle 관련
+.gradle/
+# gradle-wrapper.jar는 빌드에 필요하므로 포함
