@@ -1,5 +1,3 @@
-# Docker 빌드 시 제외할 파일들
-
 # Git 관련 파일
 .git
 .gitignore
@@ -15,7 +13,7 @@
 build/
 target/
 out/
-# JAR 파일 제외 (단, gradle-wrapper.jar는 포함)
+# 단 gradle-wrapper.jar는 포함
 !gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
@@ -35,10 +33,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Node.js 관련 (만약 있다면)
-node_modules/
-npm-debug.log*
-
 # Docker 관련 파일
 Dockerfile*
 docker-compose*
@@ -57,4 +51,3 @@ reports/
 
 # Gradle 관련
 .gradle/
-# gradle-wrapper.jar는 빌드에 필요하므로 포함

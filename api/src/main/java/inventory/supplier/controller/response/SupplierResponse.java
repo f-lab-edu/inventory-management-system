@@ -1,5 +1,6 @@
 package inventory.supplier.controller.response;
 
+import inventory.supplier.domain.Supplier;
 import java.time.LocalDateTime;
 
 public record SupplierResponse(
@@ -36,4 +37,19 @@ public record SupplierResponse(
         );
     }
 
+    public static SupplierResponse from(Supplier supplier) {
+        return new SupplierResponse(
+                supplier.getSupplierId(),
+                supplier.getName(),
+                supplier.getBusinessRegistrationNumber(),
+                supplier.getPostcode(),
+                supplier.getBaseAddress(),
+                supplier.getDetailAddress(),
+                supplier.getCeoName(),
+                supplier.getManagerName(),
+                supplier.getManagerContact(),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
 }

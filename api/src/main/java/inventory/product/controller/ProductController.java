@@ -1,134 +1,87 @@
 package inventory.product.controller;
 
-import inventory.exception.CustomException;
-import inventory.exception.ExceptionCode;
+import inventory.common.dto.response.ApiResponse;
+import inventory.common.dto.response.PageResponse;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
 import inventory.product.controller.response.ProductResponse;
-import inventory.response.ApiResponse;
-import inventory.response.PageResponse;
+import inventory.product.domain.Product;
+import inventory.product.service.ProductService;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import static inventory.exception.ExceptionCode.RESOURCE_NOT_FOUND;
-import static inventory.supplier.controller.SupplierController.SUPPLIER_STORE;
-
+@RequiredArgsConstructor
 @RequestMapping("/api/v1/products")
 @RestController
 public class ProductController {
-    
-    public static final AtomicLong ID_GENERATOR = new AtomicLong();
-    public static final Map<Long, ProductResponse> PRODUCT_STORE = new ConcurrentHashMap<>();
 
-    private static final String DEFAULT_PAGE_NUMBER = "0";
-    private static final String DEFAULT_PAGE_SIZE = "50";
-    private static final String DEFAULT_THUMBNAIL = "DEFAULT";
+    private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody CreateProductRequest request) {
-        if (!SUPPLIER_STORE.containsKey(request.supplierId())) {
-            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
-        }
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @Valid @RequestBody CreateProductRequest request) {
+        Product savedProduct = productService.save(request);
+        ProductResponse response = ProductResponse.from(savedProduct);
 
-        Long id = ID_GENERATOR.getAndIncrement();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(HttpStatus.CREATED, response));
+    }
 
-        ProductResponse productResponse = ProductResponse.of(
-                id,
-                request.productName(),
-                request.supplierId(),
-                SUPPLIER_STORE.get(request.supplierId()).name(),
-                request.productCode(),
-                request.thumbnailUrl() == null ? DEFAULT_THUMBNAIL : request.thumbnailUrl(),
-                request.unit(),
-                true,
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
+    @GetMapping("{id}")
+    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable Long id) {
+        Product product = productService.findById(id);
+        ProductResponse response = ProductResponse.from(product);
 
-        PRODUCT_STORE.put(id, productResponse);
-
-        return ResponseEntity.ok(ApiResponse.success(productResponse));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> searchProduct(
-            @RequestParam(defaultValue = DEFAULT_PAGE_NUMBER) final int currentPageNumber,
-            @RequestParam(defaultValue = DEFAULT_PAGE_SIZE) final int pageSize
-    ) {
-        List<ProductResponse> products = PRODUCT_STORE.values().stream()
-                .sorted(Comparator.comparing(ProductResponse::createdAt).reversed())
-                .toList();
+            @RequestParam(defaultValue = "0") int currentPageNumber,
+            @RequestParam(defaultValue = "50") int pageSize) {
 
-        long totalElements = products.size();
+        List<Product> products = productService.findAll();
+
         int startIndex = currentPageNumber * pageSize;
         int endIndex = Math.min(startIndex + pageSize, products.size());
+        List<Product> pagedProducts = products.subList(startIndex, endIndex);
 
-        List<ProductResponse> pagedProducts = products.subList(startIndex, endIndex);
+        List<ProductResponse> responses = pagedProducts.stream()
+                .map(ProductResponse::from)
+                .toList();
 
         PageResponse<ProductResponse> pageResponse = PageResponse.of(
-                pagedProducts,
-                currentPageNumber,
-                pageSize,
-                totalElements
-        );
+                responses, currentPageNumber, pageSize, products.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
-    @GetMapping("{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable final Long id) {
-        ProductResponse foundProduct = Optional.ofNullable(PRODUCT_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
-
-        Optional.ofNullable(SUPPLIER_STORE.get(foundProduct.supplierId()))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
-
-        return ResponseEntity.ok(ApiResponse.success(foundProduct));
-    }
-
     @PutMapping("{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
-            @PathVariable final Long id,
-            @Valid @RequestBody final UpdateProductRequest request
-    ) {
-        ProductResponse currentProduct = Optional.ofNullable(PRODUCT_STORE.get(id))
-                .orElseThrow(() -> new CustomException(RESOURCE_NOT_FOUND));
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProductRequest request) {
 
-        ProductResponse updatedProduct = ProductResponse.of(
-                id,
-                request.productName(),
-                currentProduct.supplierId(),
-                currentProduct.supplierName(),
-                currentProduct.productCode(),
-                request.thumbnailUrl() == null ? DEFAULT_THUMBNAIL : request.thumbnailUrl(),
-                currentProduct.unit(),
-                request.active(),
-                currentProduct.createdAt(),
-                LocalDateTime.now()
-        );
+        Product updatedProduct = productService.update(id, request);
+        ProductResponse response = ProductResponse.from(updatedProduct);
 
-        PRODUCT_STORE.put(id, updatedProduct);
-
-        return ResponseEntity.ok(ApiResponse.success(updatedProduct));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable final Long id) {
-        if (!PRODUCT_STORE.containsKey(id)) {
-            throw new CustomException(RESOURCE_NOT_FOUND);
-        }
-
-        PRODUCT_STORE.remove(id);
-
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
+        productService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }

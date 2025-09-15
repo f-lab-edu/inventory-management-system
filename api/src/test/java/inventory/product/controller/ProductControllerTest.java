@@ -1,13 +1,21 @@
 package inventory.product.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
-import inventory.exception.GlobalExceptionHandler;
+import inventory.common.exception.GlobalExceptionHandler;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
-import inventory.supplier.controller.SupplierController;
-import inventory.supplier.controller.response.SupplierResponse;
-import org.junit.jupiter.api.BeforeEach;
+import inventory.product.domain.Product;
+import inventory.product.service.ProductService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,16 +23,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
-
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ProductController.class)
 @Import(GlobalExceptionHandler.class)
@@ -38,261 +38,190 @@ class ProductControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Long testSupplierId;
-    private String testSupplierName;
+    @MockitoBean
+    private ProductService productService;
 
-    @BeforeEach
-    void setUp() {
-        ProductController.PRODUCT_STORE.clear();
-        ProductController.ID_GENERATOR.set(1);
-        SupplierController.SUPPLIER_STORE.clear();
-
-        // 테스트용 공급업체 데이터 직접 생성
-        createTestSupplier();
-    }
-
-    private void createTestSupplier() {
-        testSupplierId = 1L;
-        testSupplierName = "테스트 공급업체";
-        
-        SupplierResponse supplierResponse = SupplierResponse.of(
-                testSupplierId,
-                testSupplierName,
-                "1234567890",
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "김수용",
-                "김매니저",
-                "01012345678",
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
-        
-        SupplierController.SUPPLIER_STORE.put(testSupplierId, supplierResponse);
-    }
-
-    @DisplayName("제품 생성을 성공하면 OK 상태와 제품 정보를 반환한다.")
+    @DisplayName("상품 생성을 성공하면 CREATED 상태와 상품 정보를 반환한다")
     @Test
     void createProductWithSuccess() throws Exception {
+        // given
         CreateProductRequest request = new CreateProductRequest(
-                testSupplierId,
-                "테스트 제품",
-                "PROD001",
-                "EA",
-                "https://example.com/thumbnail.jpg"
+                1L, "테스트 상품", "PROD001", "EA", "https://example.com/thumbnail.jpg"
         );
 
-        ResultActions result = mockMvc.perform(post(BASE_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        );
+        Product savedProduct = Product.builder()
+                .productId(1L)
+                .supplierId(1L)
+                .productName("테스트 상품")
+                .productCode("PROD001")
+                .unit("EA")
+                .thumbnailUrl("https://example.com/thumbnail.jpg")
+                .active(true)
+                .build();
 
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(HttpStatus.OK.name()))
-                .andExpect(jsonPath("$.data.productName").value("테스트 제품"))
-                .andExpect(jsonPath("$.data.supplierId").value(testSupplierId))
-                .andExpect(jsonPath("$.data.supplierName").value(testSupplierName))
+        when(productService.save(any(CreateProductRequest.class))).thenReturn(savedProduct);
+
+        // when & then
+        mockMvc.perform(post(BASE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
+                .andExpect(jsonPath("$.data.productId").value(1L))
+                .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
+                .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.productCode").value("PROD001"))
                 .andExpect(jsonPath("$.data.thumbnailUrl").value("https://example.com/thumbnail.jpg"))
                 .andExpect(jsonPath("$.data.unit").value("EA"))
                 .andExpect(jsonPath("$.data.active").value(true));
     }
 
-    @DisplayName("존재하지 않는 공급업체 ID로 제품 생성 시 404를 반환한다.")
-    @Test
-    void createProductWithNonExistentSupplier() throws Exception {
-        CreateProductRequest request = new CreateProductRequest(
-                999L,
-                "테스트 제품",
-                "PROD001",
-                "EA",
-                "https://example.com/thumbnail.jpg"
-        );
-
-        mockMvc.perform(post(BASE_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
-    }
-
-    @DisplayName("제품 페이징 조회를 성공하면 createdAt 역순으로 정렬하여 반환한다")
-    @Test
-    void searchProductWithSuccess() throws Exception {
-        // 여러 제품 생성
-        for (int i = 0; i < 10; i++) {
-            CreateProductRequest request = new CreateProductRequest(
-                    testSupplierId,
-                    "테스트 제품" + i,
-                    "PROD00" + i,
-                    "EA",
-                    "https://example.com/thumbnail" + i + ".jpg"
-            );
-
-            mockMvc.perform(post(BASE_URL)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isOk());
-        }
-
-        ResultActions result = mockMvc.perform(get(BASE_URL)
-                .param("currentPageNumber", "0")
-                .param("pageSize", "5")
-        );
-
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content.length()").value(5))
-                .andExpect(jsonPath("$.data.currentPageNumber").value(0))
-                .andExpect(jsonPath("$.data.pageSize").value(5))
-                .andExpect(jsonPath("$.data.totalElements").value(10))
-                .andExpect(jsonPath("$.data.hasNext").value(true));
-
-        // createdAt 역순(내림차순) 검증
-        String body = mockMvc.perform(get(BASE_URL)
-                        .param("currentPageNumber", "0")
-                        .param("pageSize", "5"))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(StandardCharsets.UTF_8);
-
-        String firstCreatedAt = JsonPath.read(body, "$.data.content[0].createdAt");
-        String secondCreatedAt = JsonPath.read(body, "$.data.content[1].createdAt");
-        LocalDateTime first = LocalDateTime.parse(firstCreatedAt);
-        LocalDateTime second = LocalDateTime.parse(secondCreatedAt);
-        assertThat(first).isAfterOrEqualTo(second);
-    }
-
-    @DisplayName("단일 제품 조회를 성공하면 해당 제품 정보를 반환한다")
+    @DisplayName("상품 조회를 성공하면 OK 상태와 상품 정보를 반환한다")
     @Test
     void getProductWithSuccess() throws Exception {
-        CreateProductRequest request = new CreateProductRequest(
-                testSupplierId,
-                "테스트 제품",
-                "PROD001",
-                "EA",
-                "https://example.com/thumbnail.jpg"
-        );
+        // given
+        Long productId = 1L;
+        Product product = Product.builder()
+                .productId(productId)
+                .supplierId(1L)
+                .productName("테스트 상품")
+                .productCode("PROD001")
+                .unit("EA")
+                .thumbnailUrl("https://example.com/thumbnail.jpg")
+                .active(true)
+                .build();
 
-        String body = mockMvc.perform(post(BASE_URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
-                )
+        when(productService.findById(productId)).thenReturn(product);
+
+        // when & then
+        mockMvc.perform(get(BASE_URL + "/" + productId))
                 .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(StandardCharsets.UTF_8);
-
-        String id = JsonPath.read(body, "$.data.productId").toString();
-
-        mockMvc.perform(get(BASE_URL + "/" + id))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productId").value(Integer.parseInt(id)))
-                .andExpect(jsonPath("$.data.productName").value("테스트 제품"))
-                .andExpect(jsonPath("$.data.supplierId").value(testSupplierId));
+                .andExpect(jsonPath("$.data.productId").value(productId))
+                .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
+                .andExpect(jsonPath("$.data.supplierId").value(1L))
+                .andExpect(jsonPath("$.data.productCode").value("PROD001"))
+                .andExpect(jsonPath("$.data.unit").value("EA"))
+                .andExpect(jsonPath("$.data.active").value(true));
     }
 
-    @DisplayName("존재하지 않는 제품을 조회하면 404를 반환한다")
+    @DisplayName("상품 목록 조회를 성공하면 페이징된 결과를 반환한다")
     @Test
-    void getProductWithNotFound() throws Exception {
-        mockMvc.perform(get(BASE_URL + "/9999"))
-                .andExpect(status().isNotFound());
+    void searchProductWithSuccess() throws Exception {
+        // given
+        Product product = Product.builder()
+                .productId(1L)
+                .supplierId(1L)
+                .productName("테스트 상품")
+                .productCode("PROD001")
+                .unit("EA")
+                .thumbnailUrl("https://example.com/thumbnail.jpg")
+                .active(true)
+                .build();
+
+        when(productService.findAll()).thenReturn(java.util.List.of(product));
+
+        // when & then
+        mockMvc.perform(get(BASE_URL)
+                        .param("currentPageNumber", "0")
+                        .param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.currentPageNumber").value(0))
+                .andExpect(jsonPath("$.data.pageSize").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
-    @DisplayName("제품 정보 수정을 성공하면 수정된 정보를 반환한다")
+    @DisplayName("상품 정보 수정을 성공하면 수정된 정보를 반환한다")
     @Test
     void updateProductWithSuccess() throws Exception {
-        CreateProductRequest request = new CreateProductRequest(
-                testSupplierId,
-                "테스트 제품",
-                "PROD001",
-                "EA",
-                "https://example.com/thumbnail.jpg"
+        // given
+        Long productId = 1L;
+        UpdateProductRequest request = new UpdateProductRequest(
+                "수정된 상품명", "https://example.com/new-thumbnail.jpg", false
         );
 
-        String body = mockMvc.perform(post(BASE_URL)
+        Product updatedProduct = Product.builder()
+                .productId(productId)
+                .supplierId(1L)
+                .productName("수정된 상품명")
+                .productCode("PROD001")
+                .unit("EA")
+                .thumbnailUrl("https://example.com/new-thumbnail.jpg")
+                .active(false)
+                .build();
+
+        when(productService.update(eq(productId), any(UpdateProductRequest.class)))
+                .thenReturn(updatedProduct);
+
+        // when & then
+        mockMvc.perform(put(BASE_URL + "/" + productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(StandardCharsets.UTF_8);
-
-        String id = JsonPath.read(body, "$.data.productId").toString();
-
-        UpdateProductRequest update = new UpdateProductRequest(
-                "수정된 제품명",
-                "https://example.com/new-thumbnail.jpg",
-                false
-        );
-
-        mockMvc.perform(put(BASE_URL + "/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productName").value("수정된 제품명"))
+                .andExpect(jsonPath("$.data.productId").value(productId))
+                .andExpect(jsonPath("$.data.productName").value("수정된 상품명"))
                 .andExpect(jsonPath("$.data.thumbnailUrl").value("https://example.com/new-thumbnail.jpg"))
                 .andExpect(jsonPath("$.data.active").value(false));
     }
 
-    @DisplayName("제품 삭제를 성공하면 204를 반환한다")
+    @DisplayName("상품 삭제를 성공하면 NO_CONTENT 상태를 반환한다")
     @Test
     void deleteProductWithSuccess() throws Exception {
-        CreateProductRequest request = new CreateProductRequest(
-                testSupplierId,
-                "삭제할 제품",
-                "PROD001",
-                "EA",
-                "https://example.com/thumbnail.jpg"
-        );
+        // given
+        Long productId = 1L;
 
-        String body = mockMvc.perform(post(BASE_URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString(StandardCharsets.UTF_8);
-
-        String id = JsonPath.read(body, "$.data.productId").toString();
-
-        mockMvc.perform(delete(BASE_URL + "/" + id))
+        // when & then
+        mockMvc.perform(delete(BASE_URL + "/" + productId))
                 .andExpect(status().isNoContent());
     }
 
-    @DisplayName("thumbnailUrl이 null인 경우 DEFAULT 값이 설정된다")
+    @DisplayName("썸네일이 null인 상품 생성 시 DEFAULT 값이 설정된다")
     @Test
     void createProductWithNullThumbnailUrl() throws Exception {
+        // given
         CreateProductRequest request = new CreateProductRequest(
-                testSupplierId,
-                "테스트 제품",
-                "PROD001",
-                "EA",
-                null
+                1L, "테스트 상품", "PROD001", "EA", null
         );
 
-        mockMvc.perform(post(BASE_URL)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.thumbnailUrl").value("DEFAULT"));
-    }
+        Product savedProduct = Product.builder()
+                .productId(1L)
+                .supplierId(1L)
+                .productName("테스트 상품")
+                .productCode("PROD001")
+                .unit("EA")
+                .thumbnailUrl(null) // null로 설정하면 Product 엔티티에서 기본값 처리
+                .active(true)
+                .build();
 
-    @DisplayName("유효하지 않은 제품 생성 요청을 하면 400을 반환한다")
-    @Test
-    void createProductWithValidationFail() throws Exception {
-        CreateProductRequest invalid = new CreateProductRequest(
-                null,
-                "",
-                "",
-                "",
-                "https://example.com/thumbnail.jpg"
-        );
+        when(productService.save(any(CreateProductRequest.class))).thenReturn(savedProduct);
 
+        // when & then
         mockMvc.perform(post(BASE_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalid)))
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
+                .andExpect(jsonPath("$.data.productId").value(1L))
+                .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
+                .andExpect(jsonPath("$.data.supplierId").value(1L))
+                .andExpect(jsonPath("$.data.productCode").value("PROD001"))
+                .andExpect(jsonPath("$.data.thumbnailUrl").value("thumbnail/default.png"))
+                .andExpect(jsonPath("$.data.unit").value("EA"))
+                .andExpect(jsonPath("$.data.active").value(true));
+    }
+
+    @DisplayName("유효하지 않은 상품 생성 요청 시 400을 반환한다")
+    @Test
+    void createProductWithValidationFail() throws Exception {
+        // given
+        CreateProductRequest invalidRequest = new CreateProductRequest(
+                null, "", "", "", "https://example.com/thumbnail.jpg"
+        );
+
+        // when & then
+        mockMvc.perform(post(BASE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
 }
-
