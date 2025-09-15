@@ -57,7 +57,6 @@ class SupplierControllerTest {
         );
 
         Supplier savedSupplier = Supplier.builder()
-                .supplierId(1L)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("12345")
@@ -76,7 +75,6 @@ class SupplierControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
-                .andExpect(jsonPath("$.data.id").value(1L))
                 .andExpect(jsonPath("$.data.name").value("테스트 공급업체"))
                 .andExpect(jsonPath("$.data.businessRegistrationNumber").value("1234567890"))
                 .andExpect(jsonPath("$.data.postcode").value("12345"))
@@ -93,7 +91,6 @@ class SupplierControllerTest {
         // given
         Long supplierId = 1L;
         Supplier supplier = Supplier.builder()
-                .supplierId(supplierId)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("12345")
@@ -109,7 +106,6 @@ class SupplierControllerTest {
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + supplierId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(supplierId))
                 .andExpect(jsonPath("$.data.name").value("테스트 공급업체"))
                 .andExpect(jsonPath("$.data.businessRegistrationNumber").value("1234567890"))
                 .andExpect(jsonPath("$.data.postcode").value("12345"))
@@ -121,7 +117,6 @@ class SupplierControllerTest {
     void searchSupplierWithSuccess() throws Exception {
         // given
         Supplier supplier = Supplier.builder()
-                .supplierId(1L)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("12345")
@@ -160,7 +155,6 @@ class SupplierControllerTest {
         );
 
         Supplier updatedSupplier = Supplier.builder()
-                .supplierId(supplierId)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("54321")
@@ -179,7 +173,6 @@ class SupplierControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(supplierId))
                 .andExpect(jsonPath("$.data.postcode").value("54321"))
                 .andExpect(jsonPath("$.data.baseAddress").value("수정주소"))
                 .andExpect(jsonPath("$.data.detailAddress").value("수정상세"))

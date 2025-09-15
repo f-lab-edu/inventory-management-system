@@ -74,7 +74,6 @@ class InboundServiceTest {
                 .build();
 
         Supplier supplier = Supplier.builder()
-                .supplierId(1L)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("12345")
@@ -224,7 +223,6 @@ class InboundServiceTest {
                 .build();
 
         Supplier supplier = Supplier.builder()
-                .supplierId(1L)
                 .name("테스트 공급업체")
                 .businessRegistrationNumber("1234567890")
                 .postcode("12345")

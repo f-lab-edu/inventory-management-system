@@ -1,15 +1,23 @@
 package inventory.supplier.domain;
 
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@Entity
 public class Supplier {
 
-    private static final AtomicLong ID_GENERATOR = new AtomicLong();
-
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
     private Long supplierId;
 
     private String name;
@@ -31,10 +39,9 @@ public class Supplier {
     private boolean active = true;
 
     @Builder
-    public Supplier(Long supplierId, String name, String businessRegistrationNumber, String postcode,
+    public Supplier(String name, String businessRegistrationNumber, String postcode,
                     String baseAddress, String detailAddress, String ceoName, String managerName,
                     String managerContact) {
-        this.supplierId = supplierId != null ? supplierId : ID_GENERATOR.getAndIncrement();
         this.name = name;
         this.businessRegistrationNumber = businessRegistrationNumber;
         this.postcode = postcode;
@@ -43,6 +50,16 @@ public class Supplier {
         this.ceoName = ceoName;
         this.managerName = managerName;
         this.managerContact = managerContact;
+    }
+
+    public Supplier update(Supplier updateSupplier) {
+        this.postcode = updateSupplier.postcode;
+        this.baseAddress = updateSupplier.baseAddress;
+        this.detailAddress = updateSupplier.detailAddress;
+        this.ceoName = updateSupplier.ceoName;
+        this.managerName = updateSupplier.managerName;
+        this.managerContact = updateSupplier.managerContact;
+        return this;
     }
 
     @Override
