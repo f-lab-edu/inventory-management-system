@@ -52,13 +52,13 @@ public class Supplier {
         this.managerContact = managerContact;
     }
 
-    public Supplier update(Supplier updateSupplier) {
-        this.postcode = updateSupplier.postcode;
-        this.baseAddress = updateSupplier.baseAddress;
-        this.detailAddress = updateSupplier.detailAddress;
-        this.ceoName = updateSupplier.ceoName;
-        this.managerName = updateSupplier.managerName;
-        this.managerContact = updateSupplier.managerContact;
+    public Supplier update(String postcode, String baseAddress, String detailAddress, String ceoName, String managerName, String managerContact) {
+        this.postcode = postcode;
+        this.baseAddress = baseAddress;
+        this.detailAddress = detailAddress;
+        this.ceoName = ceoName;
+        this.managerName = managerName;
+        this.managerContact = managerContact;
         return this;
     }
 

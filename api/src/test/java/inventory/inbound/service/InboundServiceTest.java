@@ -10,13 +10,11 @@ import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.repository.InboundRepository;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.domain.Product;
-import inventory.product.service.ProductService;
-import inventory.supplier.controller.request.CreateSupplierRequest;
+import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
-import inventory.supplier.service.SupplierService;
-import inventory.warehouse.controller.request.CreateWarehouseRequest;
+import inventory.supplier.repository.SupplierRepository;
 import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.service.WarehouseService;
+import inventory.warehouse.repository.WarehouseRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,55 +34,54 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InboundServiceTest {
 
     @Autowired
-    private InboundRepository inboundRepository;
-
-    @Autowired
     private InboundService inboundService;
 
     @Autowired
-    private WarehouseService warehouseService;
+    private InboundRepository inboundRepository;
 
     @Autowired
-    private SupplierService supplierService;
+    private WarehouseRepository warehouseRepository;
 
     @Autowired
-    private ProductService productService;
+    private SupplierRepository supplierRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     private Warehouse createTestWarehouse(String name) {
-        CreateWarehouseRequest warehouseRequest = new CreateWarehouseRequest(
-                name,
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "관리자",
-                "01012345678"
-        );
-        return warehouseService.save(warehouseRequest);
+        Warehouse warehouse = Warehouse.builder()
+                .name(name)
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .managerName("관리자")
+                .managerContact("01012345678")
+                .build();
+        return warehouseRepository.save(warehouse);
     }
 
     private Supplier createTestSupplier(String name, String businessRegistrationNumber) {
-        CreateSupplierRequest supplierRequest = new CreateSupplierRequest(
-                name,
-                businessRegistrationNumber,
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "대표",
-                "매니저",
-                "01012345678"
-        );
-        return supplierService.save(supplierRequest);
+        Supplier supplier = Supplier.builder()
+                .name(name)
+                .businessRegistrationNumber(businessRegistrationNumber)
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .ceoName("대표")
+                .managerName("매니저")
+                .managerContact("01012345678")
+                .build();
+        return supplierRepository.save(supplier);
     }
 
     private Product createTestProduct(Long supplierId, String productName, String productCode) {
-        CreateProductRequest productRequest = new CreateProductRequest(
-                supplierId,
-                productName,
-                productCode,
-                "개",
-                "https://example.com/thumbnail.jpg"
-        );
-        return productService.save(productRequest);
+        Product product = Product.builder()
+                .supplierId(supplierId)
+                .productName(productName)
+                .productCode(productCode)
+                .unit("개")
+                .build();
+        return productRepository.save(product);
     }
 
     @DisplayName("입고 생성을 성공하면 저장된 입고 정보를 반환한다")

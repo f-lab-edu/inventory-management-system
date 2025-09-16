@@ -1,6 +1,7 @@
 package inventory.supplier.controller.response;
 
 import inventory.supplier.domain.Supplier;
+
 import java.time.LocalDateTime;
 
 public record SupplierResponse(
@@ -13,6 +14,7 @@ public record SupplierResponse(
         String ceoName,
         String managerName,
         String managerContact,
+        boolean active,
         LocalDateTime createdAt,
         LocalDateTime modifiedAt
 ) {
@@ -26,6 +28,7 @@ public record SupplierResponse(
             final String ceoName,
             final String managerName,
             final String managerContact,
+            final boolean active,
             final LocalDateTime createdAt,
             final LocalDateTime modifiedAt
     ) {
@@ -33,7 +36,7 @@ public record SupplierResponse(
                 id, name, businessRegistrationNumber,
                 postcode, baseAddress, detailAddress,
                 ceoName, managerName, managerContact,
-                createdAt, modifiedAt
+                active, createdAt, modifiedAt
         );
     }
 
@@ -48,6 +51,7 @@ public record SupplierResponse(
                 supplier.getCeoName(),
                 supplier.getManagerName(),
                 supplier.getManagerContact(),
+                supplier.isActive(),
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );

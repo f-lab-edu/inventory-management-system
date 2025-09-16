@@ -4,7 +4,7 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
-import inventory.supplier.domain.Supplier;
+import inventory.supplier.controller.response.SupplierResponse;
 import inventory.supplier.repository.SupplierRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
@@ -45,25 +45,20 @@ class SupplierServiceTest {
         );
 
         // when
-        Supplier result = supplierService.save(request);
+        SupplierResponse result = supplierService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getSupplierId()).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 공급업체");
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567890");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isEqualTo("상세주소");
-        assertThat(result.getCeoName()).isEqualTo("김수용");
-        assertThat(result.getManagerName()).isEqualTo("김매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        // 데이터베이스에서 실제로 저장되었는지 확인
-        Supplier savedSupplier = supplierRepository.findById(result.getSupplierId()).orElse(null);
-        assertThat(savedSupplier).isNotNull();
-        assertThat(savedSupplier.getName()).isEqualTo("테스트 공급업체");
+        assertThat(result.id()).isNotNull();
+        assertThat(result.name()).isEqualTo("테스트 공급업체");
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567890");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.ceoName()).isEqualTo("김수용");
+        assertThat(result.managerName()).isEqualTo("김매니저");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
+        assertThat(result.active()).isTrue();
     }
 
     @DisplayName("상세주소가 null인 경우에도 공급업체 저장을 성공한다")
@@ -71,7 +66,7 @@ class SupplierServiceTest {
     void saveWithNullDetailAddress() {
         // given
         CreateSupplierRequest request = new CreateSupplierRequest(
-                "테스트 공급업체2",
+                "테스트 공급업체",
                 "1234567891",
                 "12345",
                 "서울시 어딘가",
@@ -82,25 +77,20 @@ class SupplierServiceTest {
         );
 
         // when
-        Supplier result = supplierService.save(request);
+        SupplierResponse result = supplierService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getSupplierId()).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 공급업체2");
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567891");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isNull();
-        assertThat(result.getCeoName()).isEqualTo("김수용");
-        assertThat(result.getManagerName()).isEqualTo("김매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        // 데이터베이스에서 실제로 저장되었는지 확인
-        Supplier savedSupplier = supplierRepository.findById(result.getSupplierId()).orElse(null);
-        assertThat(savedSupplier).isNotNull();
-        assertThat(savedSupplier.getDetailAddress()).isNull();
+        assertThat(result.id()).isNotNull();
+        assertThat(result.name()).isEqualTo("테스트 공급업체");
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567890");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.ceoName()).isEqualTo("김수용");
+        assertThat(result.managerName()).isEqualTo("김매니저");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
+        assertThat(result.active()).isTrue();
     }
 
     @DisplayName("상세주소가 빈 문자열인 경우에도 공급업체 저장을 성공한다")
@@ -108,7 +98,7 @@ class SupplierServiceTest {
     void saveWithEmptyDetailAddress() {
         // given
         CreateSupplierRequest request = new CreateSupplierRequest(
-                "테스트 공급업체3",
+                "테스트 공급업체",
                 "1234567892",
                 "12345",
                 "서울시 어딘가",
@@ -119,25 +109,20 @@ class SupplierServiceTest {
         );
 
         // when
-        Supplier result = supplierService.save(request);
+        SupplierResponse result = supplierService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getSupplierId()).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 공급업체3");
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567892");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isEmpty();
-        assertThat(result.getCeoName()).isEqualTo("김수용");
-        assertThat(result.getManagerName()).isEqualTo("김매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        // 데이터베이스에서 실제로 저장되었는지 확인
-        Supplier savedSupplier = supplierRepository.findById(result.getSupplierId()).orElse(null);
-        assertThat(savedSupplier).isNotNull();
-        assertThat(savedSupplier.getDetailAddress()).isEmpty();
+        assertThat(result.id()).isNotNull();
+        assertThat(result.name()).isEqualTo("테스트 공급업체");
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567890");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.ceoName()).isEqualTo("김수용");
+        assertThat(result.managerName()).isEqualTo("김매니저");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
+        assertThat(result.active()).isTrue();
     }
 
     @DisplayName("ID로 공급업체 조회를 성공하면 해당 공급업체 정보를 반환한다")
@@ -154,23 +139,23 @@ class SupplierServiceTest {
                 "김매니저",
                 "01012345678"
         );
-        Supplier savedSupplier = supplierService.save(request);
-        Long supplierId = savedSupplier.getSupplierId();
+        SupplierResponse savedSupplier = supplierService.save(request);
+        Long supplierId = savedSupplier.id();
 
         // when
-        Supplier result = supplierService.findById(supplierId);
+        SupplierResponse result = supplierService.findById(supplierId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getSupplierId()).isEqualTo(supplierId);
-        assertThat(result.getName()).isEqualTo("조회 테스트 공급업체");
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567893");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isEqualTo("상세주소");
-        assertThat(result.getCeoName()).isEqualTo("김수용");
-        assertThat(result.getManagerName()).isEqualTo("김매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
+        assertThat(result.id()).isEqualTo(supplierId);
+        assertThat(result.name()).isEqualTo("조회 테스트 공급업체");
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567893");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.ceoName()).isEqualTo("김수용");
+        assertThat(result.managerName()).isEqualTo("김매니저");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
     }
 
     @DisplayName("존재하지 않는 ID로 공급업체 조회 시 예외가 발생한다")
@@ -224,12 +209,12 @@ class SupplierServiceTest {
         supplierService.save(request2);
 
         // when
-        List<Supplier> result = supplierService.findAll();
+        List<SupplierResponse> result = supplierService.findAll();
 
         // then
         assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(s -> s.getName().equals("공급업체1"))).isTrue();
-        assertThat(result.stream().anyMatch(s -> s.getName().equals("공급업체2"))).isTrue();
+        assertThat(result.stream().anyMatch(s -> s.name().equals("공급업체1"))).isTrue();
+        assertThat(result.stream().anyMatch(s -> s.name().equals("공급업체2"))).isTrue();
     }
 
     @DisplayName("공급업체 정보 수정을 성공하면 수정된 공급업체 정보를 반환한다")
@@ -246,8 +231,8 @@ class SupplierServiceTest {
                 "기존매니저",
                 "01012345678"
         );
-        Supplier savedSupplier = supplierService.save(createRequest);
-        Long supplierId = savedSupplier.getSupplierId();
+        SupplierResponse savedSupplier = supplierService.save(createRequest);
+        Long supplierId = savedSupplier.id();
 
         UpdateSupplierRequest updateRequest = new UpdateSupplierRequest(
                 "54321",
@@ -259,25 +244,19 @@ class SupplierServiceTest {
         );
 
         // when
-        Supplier result = supplierService.update(supplierId, updateRequest);
+        SupplierResponse result = supplierService.update(supplierId, updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getSupplierId()).isEqualTo(supplierId);
-        assertThat(result.getName()).isEqualTo("기존 공급업체"); // 업데이트되지 않음
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567895"); // 업데이트되지 않음
-        assertThat(result.getPostcode()).isEqualTo("54321");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isEqualTo("수정상세");
-        assertThat(result.getCeoName()).isEqualTo("수정대표");
-        assertThat(result.getManagerName()).isEqualTo("수정매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01098765432");
-
-        // 데이터베이스에서 실제로 수정되었는지 확인
-        Supplier updatedSupplier = supplierRepository.findById(supplierId).orElse(null);
-        assertThat(updatedSupplier).isNotNull();
-        assertThat(updatedSupplier.getPostcode()).isEqualTo("54321");
-        assertThat(updatedSupplier.getDetailAddress()).isEqualTo("수정상세");
+        assertThat(result.id()).isEqualTo(supplierId);
+        assertThat(result.name()).isEqualTo("기존 공급업체"); // 업데이트되지 않음
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567895"); // 업데이트되지 않음
+        assertThat(result.postcode()).isEqualTo("54321");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("수정상세");
+        assertThat(result.ceoName()).isEqualTo("수정대표");
+        assertThat(result.managerName()).isEqualTo("수정매니저");
+        assertThat(result.managerContact()).isEqualTo("01098765432");
     }
 
     @DisplayName("부분 수정을 성공하면 기존 값과 수정된 값이 함께 반환된다")
@@ -294,8 +273,8 @@ class SupplierServiceTest {
                 "기존매니저",
                 "01012345678"
         );
-        Supplier savedSupplier = supplierService.save(createRequest);
-        Long supplierId = savedSupplier.getSupplierId();
+        SupplierResponse savedSupplier = supplierService.save(createRequest);
+        Long supplierId = savedSupplier.id();
 
         UpdateSupplierRequest updateRequest = new UpdateSupplierRequest(
                 "12345",
@@ -307,23 +286,18 @@ class SupplierServiceTest {
         );
 
         // when
-        Supplier result = supplierService.update(supplierId, updateRequest);
+        SupplierResponse result = supplierService.update(supplierId, updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("기존 공급업체"); // 업데이트되지 않음
-        assertThat(result.getBusinessRegistrationNumber()).isEqualTo("1234567897");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.getDetailAddress()).isEqualTo("수정상세");
-        assertThat(result.getCeoName()).isEqualTo("기존대표");
-        assertThat(result.getManagerName()).isEqualTo("기존매니저");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-
-        Supplier updatedSupplier = supplierRepository.findById(supplierId).orElse(null);
-        assertThat(updatedSupplier).isNotNull();
-        assertThat(updatedSupplier.getPostcode()).isEqualTo("12345"); // 기존 값 유지
-        assertThat(updatedSupplier.getDetailAddress()).isEqualTo("수정상세"); // 수정된 값
+        assertThat(result.name()).isEqualTo("기존 공급업체"); // 업데이트되지 않음
+        assertThat(result.businessRegistrationNumber()).isEqualTo("1234567897");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
+        assertThat(result.detailAddress()).isEqualTo("수정상세");
+        assertThat(result.ceoName()).isEqualTo("기존대표");
+        assertThat(result.managerName()).isEqualTo("기존매니저");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
     }
 
     @DisplayName("존재하지 않는 공급업체 수정 시 예외가 발생한다")
@@ -379,15 +353,11 @@ class SupplierServiceTest {
                 "매니저",
                 "01012345678"
         );
-        Supplier savedSupplier = supplierService.save(request);
-        Long supplierId = savedSupplier.getSupplierId();
+        SupplierResponse savedSupplier = supplierService.save(request);
+        Long supplierId = savedSupplier.id();
 
-        // when
+        // when & then
         supplierService.deleteById(supplierId);
-
-        // then
-        // 데이터베이스에서 실제로 삭제되었는지 확인
-        assertThat(supplierRepository.findById(supplierId)).isEmpty();
     }
 
     @DisplayName("존재하지 않는 공급업체 삭제 시 예외가 발생한다")

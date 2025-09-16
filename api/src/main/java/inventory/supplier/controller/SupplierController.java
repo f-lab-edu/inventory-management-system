@@ -5,22 +5,14 @@ import inventory.common.dto.response.PageResponse;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
 import inventory.supplier.controller.response.SupplierResponse;
-import inventory.supplier.domain.Supplier;
 import inventory.supplier.service.SupplierService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/suppliers")
@@ -32,18 +24,15 @@ public class SupplierController {
     @PostMapping
     public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(
             @Valid @RequestBody CreateSupplierRequest request) {
-        Supplier savedSupplier = supplierService.save(request);
-        SupplierResponse response = SupplierResponse.from(savedSupplier);
+        SupplierResponse savedSupplier = supplierService.save(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, response));
+                .body(ApiResponse.success(HttpStatus.CREATED, savedSupplier));
     }
 
     @GetMapping("{id}")
     public ResponseEntity<ApiResponse<SupplierResponse>> getSupplier(@PathVariable Long id) {
-        Supplier supplier = supplierService.findById(id);
-        SupplierResponse response = SupplierResponse.from(supplier);
-
+        SupplierResponse response = supplierService.findById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -51,26 +40,23 @@ public class SupplierController {
     public ResponseEntity<ApiResponse<PageResponse<SupplierResponse>>> searchSupplier(
             @RequestParam(defaultValue = "0") int currentPageNumber, @RequestParam(defaultValue = "30") int pageSize) {
 
-        List<Supplier> suppliers = supplierService.findAll();
+        List<SupplierResponse> suppliers = supplierService.findAll();
 
         int startIndex = currentPageNumber * pageSize;
         int endIndex = Math.min(startIndex + pageSize, suppliers.size());
-        List<Supplier> pagedSuppliers = suppliers.subList(startIndex, endIndex);
+        List<SupplierResponse> pagedSuppliers = suppliers.subList(startIndex, endIndex);
 
-        List<SupplierResponse> responses = pagedSuppliers.stream().map(SupplierResponse::from).toList();
-
-        PageResponse<SupplierResponse> pageResponse = PageResponse.of(responses, currentPageNumber, pageSize,
-                suppliers.size());
+        PageResponse<SupplierResponse> pageResponse =
+                PageResponse.of(pagedSuppliers, currentPageNumber, pageSize, suppliers.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
     @PutMapping("{id}")
-    public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(@PathVariable Long id,
-                                                                        @Valid @RequestBody UpdateSupplierRequest request) {
-
-        Supplier updatedSupplier = supplierService.update(id, request);
-        SupplierResponse response = SupplierResponse.from(updatedSupplier);
+    public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(
+            @PathVariable Long id, @Valid @RequestBody UpdateSupplierRequest request
+    ) {
+        SupplierResponse response = supplierService.update(id, request);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
