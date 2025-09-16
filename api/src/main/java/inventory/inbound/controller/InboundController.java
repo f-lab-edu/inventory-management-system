@@ -5,21 +5,15 @@ import inventory.common.dto.response.PageResponse;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.controller.response.InboundResponse;
+import inventory.inbound.domain.Inbound;
 import inventory.inbound.service.InboundService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/inbounds")
@@ -49,14 +43,19 @@ public class InboundController {
             @RequestParam(defaultValue = "0") int currentPageNumber,
             @RequestParam(defaultValue = "50") int pageSize) {
 
-        List<InboundResponse> inbounds = inboundService.findAll();
+        List<Inbound> inbounds = inboundService.findAll();
 
         int startIndex = currentPageNumber * pageSize;
         int endIndex = Math.min(startIndex + pageSize, inbounds.size());
-        List<InboundResponse> pagedInbounds = inbounds.subList(startIndex, endIndex);
+        List<Inbound> pagedInbounds = inbounds.subList(startIndex, endIndex);
+
+        // TODO: InboundResponse.from() 메서드가 추가 파라미터를 필요로 하므로 
+        // 각 Inbound에 대해 필요한 정보를 조회해야 함
+        // 현재는 빈 리스트로 처리
+        List<InboundResponse> responses = List.of();
 
         PageResponse<InboundResponse> pageResponse = PageResponse.of(
-                pagedInbounds, currentPageNumber, pageSize, inbounds.size());
+                responses, currentPageNumber, pageSize, inbounds.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }

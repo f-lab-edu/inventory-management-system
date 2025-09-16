@@ -1,7 +1,6 @@
 package inventory.inbound.domain;
 
 import inventory.inbound.enums.InboundStatus;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,7 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,24 +28,18 @@ public class Inbound {
 
     private LocalDate expectedDate;
 
-    @ElementCollection
-    private List<InboundProduct> products;
-
     private InboundStatus status;
 
     @Builder
-    public Inbound(Long warehouseId, Long supplierId, LocalDate expectedDate,
-                   List<InboundProduct> products, InboundStatus status) {
+    public Inbound(Long warehouseId, Long supplierId, LocalDate expectedDate, InboundStatus status) {
         this.warehouseId = warehouseId;
         this.supplierId = supplierId;
         this.expectedDate = expectedDate;
-        this.products = products;
         this.status = status != null ? status : InboundStatus.REGISTERED;
     }
 
-    public Inbound updateStatus(Inbound newInbound) {
-        this.status = newInbound.status;
-        return this;
+    public void updateStatus(InboundStatus newStatus) {
+        this.status = newStatus;
     }
 
     @Override

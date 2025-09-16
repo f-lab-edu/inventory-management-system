@@ -16,7 +16,7 @@ public record CreateInboundRequest(
         @NotNull(message = "입고 예정일은 필수입니다")
         LocalDate expectedDate,
 
-        @NotEmpty(message = "상품 목록은 비어있을 수 없습니다")
+        @NotEmpty(message = "입고 목록은 비어있을 수 없습니다")
         @Valid
         List<InboundProductRequest> products
 ) {

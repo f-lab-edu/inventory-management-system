@@ -8,6 +8,7 @@ import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.controller.response.InboundResponse;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.repository.InboundProductRepository;
 import inventory.inbound.repository.InboundRepository;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
@@ -47,6 +48,9 @@ class InboundServiceTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private InboundProductRepository inboundProductRepository;
 
     private Warehouse createTestWarehouse(String name) {
         Warehouse warehouse = Warehouse.builder()
@@ -96,7 +100,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2025, 9, 16),
+                LocalDate.now(),
                 List.of(
                         new InboundProductRequest(testProduct1.getProductId(), 10),
                         new InboundProductRequest(testProduct2.getProductId(), 20)
@@ -111,13 +115,17 @@ class InboundServiceTest {
         assertThat(result.id()).isNotNull();
         assertThat(result.warehouseId()).isEqualTo(testWarehouse.getWarehouseId());
         assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId());
-        assertThat(result.expectedDate()).isEqualTo(LocalDate.of(2025, 9, 16));
+        assertThat(result.expectedDate()).isEqualTo(LocalDate.of(2024, 1, 15));
         assertThat(result.status()).isEqualTo(InboundStatus.REGISTERED);
         assertThat(result.products()).hasSize(2);
         assertThat(result.products().get(0).productId()).isEqualTo(testProduct1.getProductId());
         assertThat(result.products().get(0).quantity()).isEqualTo(10);
         assertThat(result.products().get(1).productId()).isEqualTo(testProduct2.getProductId());
         assertThat(result.products().get(1).quantity()).isEqualTo(20);
+
+        Inbound savedInbound = inboundRepository.findById(result.id()).orElse(null);
+        assertThat(savedInbound).isNotNull();
+        assertThat(savedInbound.getStatus()).isEqualTo(InboundStatus.REGISTERED);
     }
 
     @DisplayName("존재하지 않는 창고로 입고 생성 시 예외가 발생한다")
@@ -128,9 +136,9 @@ class InboundServiceTest {
         Product testProduct = createTestProduct(testSupplier.getSupplierId(), "상품1", "PROD003");
 
         CreateInboundRequest request = new CreateInboundRequest(
-                999L,
+                999L, // 존재하지 않는 창고 ID
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
 
@@ -151,7 +159,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 999L, // 존재하지 않는 공급업체 ID
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
 
@@ -171,7 +179,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(999L, 10)) // 존재하지 않는 상품 ID
         );
 
@@ -192,7 +200,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
         InboundResponse savedInbound = inboundService.save(request);
@@ -244,7 +252,7 @@ class InboundServiceTest {
         CreateInboundRequest request1 = new CreateInboundRequest(
                 testWarehouse1.getWarehouseId(),
                 testSupplier1.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct1.getProductId(), 10))
         );
 
@@ -259,12 +267,12 @@ class InboundServiceTest {
         inboundService.save(request2);
 
         // when
-        List<InboundResponse> result = inboundService.findAll();
+        List<Inbound> result = inboundService.findAll();
 
         // then
         assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(i -> i.expectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
-        assertThat(result.stream().anyMatch(i -> i.expectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
+        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
+        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
     }
 
     @DisplayName("입고 상태 수정을 성공하면 수정된 입고 정보를 반환한다")
@@ -278,7 +286,7 @@ class InboundServiceTest {
         CreateInboundRequest createRequest = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
         InboundResponse savedInbound = inboundService.save(createRequest);
@@ -339,7 +347,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
         InboundResponse savedInbound = inboundService.save(request);

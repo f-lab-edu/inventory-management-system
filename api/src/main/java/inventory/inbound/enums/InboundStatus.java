@@ -6,7 +6,8 @@ import lombok.Getter;
 public enum InboundStatus {
     REGISTERED("입고 등록"),
     INSPECTING("검수 중"),
-    COMPLETED("입고 완료");
+    COMPLETED("입고 완료"),
+    REJECTED("입고 거절");
 
     private final String description;
 

@@ -6,6 +6,9 @@ import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.InboundProductRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.controller.response.InboundResponse;
+import inventory.inbound.controller.response.InboundProductResponse;
+import inventory.inbound.domain.Inbound;
+import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.service.InboundService;
 import org.junit.jupiter.api.DisplayName;
@@ -52,12 +55,14 @@ class InboundControllerTest {
                 List.of(new InboundProductRequest(1L, 100))
         );
 
-        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
-        InboundResponse savedInbound = new InboundResponse(
-                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
+        InboundResponse savedInboundResponse = new InboundResponse(
+                1L, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.REGISTERED
         );
 
-        when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInbound);
+        when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInboundResponse);
 
         // when & then
         mockMvc.perform(post(BASE_URL)
@@ -79,12 +84,14 @@ class InboundControllerTest {
     void getInboundWithSuccess() throws Exception {
         // given
         Long inboundId = 1L;
-        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
-        InboundResponse inbound = new InboundResponse(
-                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
+        InboundResponse inboundResponse = new InboundResponse(
+                inboundId, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.REGISTERED
         );
 
-        when(inboundService.findById(inboundId)).thenReturn(inbound);
+        when(inboundService.findById(inboundId)).thenReturn(inboundResponse);
 
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + inboundId))
@@ -101,11 +108,14 @@ class InboundControllerTest {
     @Test
     void searchInboundsWithSuccess() throws Exception {
         // given
-        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
-        InboundResponse inbound = new InboundResponse(
-                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
-        );
+        Inbound inbound = Inbound.builder()
+                .warehouseId(1L)
+                .supplierId(1L)
+                .expectedDate(LocalDate.now().plusDays(7))
+                .status(InboundStatus.REGISTERED)
+                .build();
 
+        // findAll() 메서드는 현재 Inbound 리스트를 반환하므로 그대로 사용
         when(inboundService.findAll()).thenReturn(List.of(inbound));
 
         // when & then
@@ -125,14 +135,16 @@ class InboundControllerTest {
         // given
         Long inboundId = 1L;
         UpdateInboundStatusRequest request = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
-
-        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
-        InboundResponse updatedInbound = new InboundResponse(
-                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.INSPECTING
+        
+        InboundResponse updatedResponse = new InboundResponse(
+                inboundId, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.INSPECTING
         );
 
         when(inboundService.updateStatus(eq(inboundId), any(UpdateInboundStatusRequest.class)))
-                .thenReturn(updatedInbound);
+                .thenReturn(updatedResponse);
 
         // when & then
         mockMvc.perform(put(BASE_URL + "/" + inboundId + "/status")
