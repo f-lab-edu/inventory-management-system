@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.controller.request.UpdateSupplierRequest;
+import inventory.supplier.controller.response.SupplierResponse;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.service.SupplierService;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,6 +55,19 @@ class SupplierControllerTest {
                 "김매니저",
                 "01012345678"
         );
+        Supplier supplier = Supplier.builder()
+                .name("테스트 공급업체")
+                .businessRegistrationNumber("1234567890")
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .ceoName("김수용")
+                .managerName("김매니저")
+                .managerContact("01012345678")
+                .build();
+
+        when(supplierService.save(any(CreateSupplierRequest.class)))
+                .thenReturn(SupplierResponse.from(supplier));
 
         // when & then
         mockMvc.perform(
@@ -84,6 +102,7 @@ class SupplierControllerTest {
                 .managerContact("01012345678")
                 .build();
 
+        when(supplierService.findById(supplierId)).thenReturn(SupplierResponse.from(supplier));
 
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + supplierId))
@@ -108,6 +127,8 @@ class SupplierControllerTest {
                 .managerName("김매니저")
                 .managerContact("01012345678")
                 .build();
+
+        when(supplierService.findAll()).thenReturn(List.of(SupplierResponse.from(supplier)));
 
         // when & then
         mockMvc.perform(get(BASE_URL)
@@ -144,6 +165,9 @@ class SupplierControllerTest {
                 .managerName("수정매니저")
                 .managerContact("01098765432")
                 .build();
+
+        when(supplierService.update(eq(supplierId), any(UpdateSupplierRequest.class)))
+                .thenReturn(SupplierResponse.from(updatedSupplier));
 
         // when & then
         mockMvc.perform(put(BASE_URL + "/" + supplierId)

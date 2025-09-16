@@ -67,7 +67,7 @@ class SupplierServiceTest {
         // given
         CreateSupplierRequest request = new CreateSupplierRequest(
                 "테스트 공급업체",
-                "1234567891",
+                "1234567890",
                 "12345",
                 "서울시 어딘가",
                 null,
@@ -86,7 +86,7 @@ class SupplierServiceTest {
         assertThat(result.businessRegistrationNumber()).isEqualTo("1234567890");
         assertThat(result.postcode()).isEqualTo("12345");
         assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.detailAddress()).isNull();
         assertThat(result.ceoName()).isEqualTo("김수용");
         assertThat(result.managerName()).isEqualTo("김매니저");
         assertThat(result.managerContact()).isEqualTo("01012345678");
@@ -99,7 +99,7 @@ class SupplierServiceTest {
         // given
         CreateSupplierRequest request = new CreateSupplierRequest(
                 "테스트 공급업체",
-                "1234567892",
+                "1234567890",
                 "12345",
                 "서울시 어딘가",
                 "",
@@ -118,7 +118,7 @@ class SupplierServiceTest {
         assertThat(result.businessRegistrationNumber()).isEqualTo("1234567890");
         assertThat(result.postcode()).isEqualTo("12345");
         assertThat(result.baseAddress()).isEqualTo("서울시 어딘가");
-        assertThat(result.detailAddress()).isEqualTo("상세주소");
+        assertThat(result.detailAddress()).isEqualTo("");
         assertThat(result.ceoName()).isEqualTo("김수용");
         assertThat(result.managerName()).isEqualTo("김매니저");
         assertThat(result.managerContact()).isEqualTo("01012345678");

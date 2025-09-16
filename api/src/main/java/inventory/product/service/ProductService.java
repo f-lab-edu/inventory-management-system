@@ -4,8 +4,10 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
+import inventory.product.controller.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
+import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,8 +21,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
 
-    public Product save(CreateProductRequest request) {
-        supplierRepository.findById(request.supplierId())
+    public ProductResponse save(CreateProductRequest request) {
+        Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         Product product = Product.builder()
@@ -31,38 +33,35 @@ public class ProductService {
                 .thumbnailUrl(request.thumbnailUrl())
                 .build();
 
-        return productRepository.save(product);
+        return ProductResponse.from(productRepository.save(product), supplier);
     }
 
-    public Product findById(Long id) {
+    public ProductResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        return productRepository.findById(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Supplier supplier = supplierRepository.findById(product.getProductId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        return ProductResponse.from(product, supplier);
     }
 
     public List<Product> findAll() {
         return productRepository.findAll();
     }
 
-    public Product update(Long id, UpdateProductRequest request) {
+    public ProductResponse update(Long id, UpdateProductRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
+        Product existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Supplier supplier = supplierRepository.findById(existingProduct.getProductId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        Product existingProduct = findById(id);
-
-        Product updateProduct = Product.builder()
-                .supplierId(existingProduct.getSupplierId())
-                .productCode(existingProduct.getProductCode())
-                .unit(existingProduct.getUnit())
-                .productName(request.productName() != null ? request.productName() : existingProduct.getProductName())
-                .thumbnailUrl(request.thumbnailUrl() != null ? request.thumbnailUrl() : existingProduct.getThumbnailUrl())
-                .build();
-
-        return existingProduct.update(updateProduct);
+        return ProductResponse.from(existingProduct.update(request.productName(), request.thumbnailUrl()), supplier);
     }
 
     public void deleteById(Long id) {

@@ -38,7 +38,8 @@ public class SupplierController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<SupplierResponse>>> searchSupplier(
-            @RequestParam(defaultValue = "0") int currentPageNumber, @RequestParam(defaultValue = "30") int pageSize) {
+            @RequestParam(defaultValue = "0") int currentPageNumber,
+            @RequestParam(defaultValue = "30") int pageSize) {
 
         List<SupplierResponse> suppliers = supplierService.findAll();
 
