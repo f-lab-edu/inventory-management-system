@@ -50,13 +50,13 @@ public class Warehouse {
         this.active = false;
     }
 
-    public Warehouse update(Warehouse updateWarehouse) {
-        this.name = updateWarehouse.name;
-        this.postcode = updateWarehouse.postcode;
-        this.baseAddress = updateWarehouse.baseAddress;
-        this.detailAddress = updateWarehouse.detailAddress;
-        this.managerName = updateWarehouse.managerName;
-        this.managerContact = updateWarehouse.managerContact;
+    public Warehouse update(String name, String postcode, String baseAddress, String detailAddress, String managerName, String managerContact) {
+        this.name = name;
+        this.postcode = postcode;
+        this.baseAddress = baseAddress;
+        this.detailAddress = detailAddress;
+        this.managerName = managerName;
+        this.managerContact = managerContact;
         return this;
     }
 

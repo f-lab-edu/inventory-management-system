@@ -4,6 +4,7 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
+import inventory.warehouse.controller.response.WarehouseResponse;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class WarehouseService {
 
     private final WarehouseRepository warehouseRepository;
 
-    public Warehouse save(CreateWarehouseRequest request) {
+    public WarehouseResponse save(CreateWarehouseRequest request) {
         Warehouse warehouse = Warehouse.builder()
                 .name(request.name())
                 .postcode(request.postcode())
@@ -27,39 +28,34 @@ public class WarehouseService {
                 .managerContact(request.managerContact())
                 .build();
 
-        return warehouseRepository.save(warehouse);
+        return WarehouseResponse.from(warehouseRepository.save(warehouse));
     }
 
-    public Warehouse findById(Long id) {
+    public WarehouseResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        return warehouseRepository.findById(id)
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        return WarehouseResponse.from(warehouseRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
     }
 
     public List<Warehouse> findAll() {
         return warehouseRepository.findAll();
     }
 
-    public Warehouse update(Long id, UpdateWarehouseRequest request) {
+    public WarehouseResponse update(Long id, UpdateWarehouseRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
+        Warehouse existingWarehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        Warehouse existingWarehouse = findById(id);
-
-        Warehouse updateWarehouse = Warehouse.builder()
-                .name(request.name())
-                .postcode(request.postcode())
-                .baseAddress(request.baseAddress())
-                .detailAddress(request.detailAddress())
-                .managerName(request.managerName())
-                .managerContact(request.managerContact())
-                .build();
-
-        return existingWarehouse.update(updateWarehouse);
+        return WarehouseResponse.from(
+                existingWarehouse.update(
+                        request.name(), request.postcode(),
+                        request.baseAddress(), request.detailAddress(),
+                        request.managerName(), request.managerContact()));
     }
 
     public void deleteById(Long id) {

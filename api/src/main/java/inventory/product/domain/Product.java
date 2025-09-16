@@ -49,10 +49,9 @@ public class Product {
         this.active = false;
     }
 
-    public Product update(Product updateProduct) {
-        this.productName = updateProduct.productName;
-        this.thumbnailUrl = updateProduct.thumbnailUrl;
-        this.active = updateProduct.active;
+    public Product update(String productName, String thumbnailUrl) {
+        this.productName = productName;
+        this.thumbnailUrl = thumbnailUrl;
         return this;
     }
 

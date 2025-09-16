@@ -8,19 +8,12 @@ import inventory.product.controller.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.service.ProductService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/products")
@@ -32,8 +25,7 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @Valid @RequestBody CreateProductRequest request) {
-        Product savedProduct = productService.save(request);
-        ProductResponse response = ProductResponse.from(savedProduct);
+        ProductResponse response = productService.save(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, response));
@@ -41,8 +33,7 @@ public class ProductController {
 
     @GetMapping("{id}")
     public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable Long id) {
-        Product product = productService.findById(id);
-        ProductResponse response = ProductResponse.from(product);
+        ProductResponse response = productService.findById(id);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -73,8 +64,7 @@ public class ProductController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateProductRequest request) {
 
-        Product updatedProduct = productService.update(id, request);
-        ProductResponse response = ProductResponse.from(updatedProduct);
+        ProductResponse response = productService.update(id, request);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

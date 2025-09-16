@@ -1,6 +1,8 @@
 package inventory.product.controller.response;
 
 import inventory.product.domain.Product;
+import inventory.supplier.domain.Supplier;
+
 import java.time.LocalDateTime;
 
 public record ProductResponse(
@@ -34,12 +36,27 @@ public record ProductResponse(
         );
     }
 
+    public static ProductResponse from(Product product, Supplier supplier) {
+        return new ProductResponse(
+                product.getProductId(),
+                product.getProductName(),
+                supplier.getSupplierId(),
+                supplier.getName(),
+                product.getProductCode(),
+                product.getThumbnailUrl(),
+                product.getUnit(),
+                product.isActive(),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
     public static ProductResponse from(Product product) {
         return new ProductResponse(
                 product.getProductId(),
                 product.getProductName(),
                 product.getSupplierId(),
-                "공급업체명", // TODO: 실제 공급업체명 조회
+                "공급업체", //todo: QueryDSL 페이징 도입시 없애기
                 product.getProductCode(),
                 product.getThumbnailUrl(),
                 product.getUnit(),

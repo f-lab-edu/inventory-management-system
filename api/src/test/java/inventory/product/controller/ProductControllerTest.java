@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.controller.request.UpdateProductRequest;
+import inventory.product.controller.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.service.ProductService;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -55,7 +58,8 @@ class ProductControllerTest {
                 .active(true)
                 .build();
 
-        when(productService.save(any(CreateProductRequest.class))).thenReturn(savedProduct);
+        when(productService.save(any(CreateProductRequest.class)))
+                .thenReturn(ProductResponse.from(savedProduct));
 
         // when & then
         mockMvc.perform(post(BASE_URL)
@@ -63,7 +67,6 @@ class ProductControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
-                .andExpect(jsonPath("$.data.productId").value(1L))
                 .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
                 .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.productCode").value("PROD001"))
@@ -86,12 +89,11 @@ class ProductControllerTest {
                 .active(true)
                 .build();
 
-        when(productService.findById(productId)).thenReturn(product);
+        when(productService.findById(productId)).thenReturn(ProductResponse.from(product));
 
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + productId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productId").value(productId))
                 .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
                 .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.productCode").value("PROD001"))
@@ -112,7 +114,7 @@ class ProductControllerTest {
                 .active(true)
                 .build();
 
-        when(productService.findAll()).thenReturn(java.util.List.of(product));
+        when(productService.findAll()).thenReturn(List.of(product));
 
         // when & then
         mockMvc.perform(get(BASE_URL)
@@ -144,14 +146,13 @@ class ProductControllerTest {
                 .build();
 
         when(productService.update(eq(productId), any(UpdateProductRequest.class)))
-                .thenReturn(updatedProduct);
+                .thenReturn(ProductResponse.from(updatedProduct));
 
         // when & then
         mockMvc.perform(put(BASE_URL + "/" + productId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.productId").value(productId))
                 .andExpect(jsonPath("$.data.productName").value("수정된 상품명"))
                 .andExpect(jsonPath("$.data.thumbnailUrl").value("https://example.com/new-thumbnail.jpg"))
                 .andExpect(jsonPath("$.data.active").value(false));
@@ -185,7 +186,7 @@ class ProductControllerTest {
                 .active(true)
                 .build();
 
-        when(productService.save(any(CreateProductRequest.class))).thenReturn(savedProduct);
+        when(productService.save(any(CreateProductRequest.class))).thenReturn(ProductResponse.from(savedProduct));
 
         // when & then
         mockMvc.perform(post(BASE_URL)
@@ -193,7 +194,6 @@ class ProductControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
-                .andExpect(jsonPath("$.data.productId").value(1L))
                 .andExpect(jsonPath("$.data.productName").value("테스트 상품"))
                 .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.productCode").value("PROD001"))
