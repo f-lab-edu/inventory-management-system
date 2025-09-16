@@ -1,19 +1,10 @@
 package inventory.warehouse.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
+import inventory.warehouse.controller.response.WarehouseResponse;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.service.WarehouseService;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = WarehouseController.class)
 @Import(GlobalExceptionHandler.class)
@@ -63,7 +61,7 @@ class WarehouseControllerTest {
                 .managerContact("01012345678")
                 .build();
 
-        when(warehouseService.save(any(CreateWarehouseRequest.class))).thenReturn(savedWarehouse);
+        when(warehouseService.save(any(CreateWarehouseRequest.class))).thenReturn(WarehouseResponse.from(savedWarehouse));
 
         // when & then
         mockMvc.perform(post(BASE_URL)
@@ -71,7 +69,6 @@ class WarehouseControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
-                .andExpect(jsonPath("$.data.id").value(1L))
                 .andExpect(jsonPath("$.data.name").value("테스트용 창고"))
                 .andExpect(jsonPath("$.data.postcode").value("12345"))
                 .andExpect(jsonPath("$.data.baseAddress").value("서울시 용산구 청파로 40"))
@@ -94,12 +91,11 @@ class WarehouseControllerTest {
                 .managerContact("01011112222")
                 .build();
 
-        when(warehouseService.findById(warehouseId)).thenReturn(warehouse);
+        when(warehouseService.findById(warehouseId)).thenReturn(WarehouseResponse.from(warehouse));
 
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + warehouseId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(warehouseId))
                 .andExpect(jsonPath("$.data.name").value("테스트 창고"))
                 .andExpect(jsonPath("$.data.postcode").value("12345"))
                 .andExpect(jsonPath("$.data.baseAddress").value("서울시 어딘가"))
@@ -158,14 +154,13 @@ class WarehouseControllerTest {
                 .build();
 
         when(warehouseService.update(eq(warehouseId), any(UpdateWarehouseRequest.class)))
-                .thenReturn(updatedWarehouse);
+                .thenReturn(WarehouseResponse.from(updatedWarehouse));
 
         // when & then
         mockMvc.perform(put(BASE_URL + "/" + warehouseId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(warehouseId))
                 .andExpect(jsonPath("$.data.name").value("수정된창고"))
                 .andExpect(jsonPath("$.data.postcode").value("54321"))
                 .andExpect(jsonPath("$.data.baseAddress").value("수정주소"))

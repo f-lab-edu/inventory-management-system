@@ -4,6 +4,7 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
+import inventory.warehouse.controller.response.WarehouseResponse;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
 import jakarta.transaction.Transactional;
@@ -43,20 +44,16 @@ class WarehouseServiceTest {
         );
 
         // when
-        Warehouse result = warehouseService.save(request);
+        WarehouseResponse result = warehouseService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 창고");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getDetailAddress()).isEqualTo("456호");
-        assertThat(result.getManagerName()).isEqualTo("홍길동");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        Warehouse savedWarehouse = warehouseRepository.findById(result.getWarehouseId()).orElse(null);
-        assertThat(savedWarehouse).isNotNull();
-        assertThat(savedWarehouse.getName()).isEqualTo("테스트 창고");
+        assertThat(result.name()).isEqualTo("테스트 창고");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.detailAddress()).isEqualTo("456호");
+        assertThat(result.managerName()).isEqualTo("홍길동");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
+        assertThat(result.active()).isTrue();
     }
 
     @DisplayName("상세주소가 null인 경우에도 창고 저장을 성공한다")
@@ -73,20 +70,14 @@ class WarehouseServiceTest {
         );
 
         // when
-        Warehouse result = warehouseService.save(request);
+        WarehouseResponse result = warehouseService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 창고");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getDetailAddress()).isNull();
-        assertThat(result.getManagerName()).isEqualTo("홍길동");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        Warehouse savedWarehouse = warehouseRepository.findById(result.getWarehouseId()).orElse(null);
-        assertThat(savedWarehouse).isNotNull();
-        assertThat(savedWarehouse.getName()).isEqualTo("테스트 창고");
+        assertThat(result.name()).isEqualTo("테스트 창고");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.detailAddress()).isNull();
+        assertThat(result.active()).isTrue();
     }
 
     @DisplayName("상세주소가 빈 문자열인 경우에도 창고 저장을 성공한다")
@@ -103,20 +94,12 @@ class WarehouseServiceTest {
         );
 
         // when
-        Warehouse result = warehouseService.save(request);
+        WarehouseResponse result = warehouseService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("테스트 창고");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getDetailAddress()).isEmpty();
-        assertThat(result.getManagerName()).isEqualTo("홍길동");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
-        assertThat(result.isActive()).isTrue();
-
-        Warehouse savedWarehouse = warehouseRepository.findById(result.getWarehouseId()).orElse(null);
-        assertThat(savedWarehouse).isNotNull();
-        assertThat(savedWarehouse.getName()).isEqualTo("테스트 창고");
+        assertThat(result.name()).isEqualTo("테스트 창고");
+        assertThat(result.detailAddress()).isEmpty();
     }
 
     @DisplayName("ID로 창고 조회를 성공하면 해당 창고 정보를 반환한다")
@@ -132,20 +115,19 @@ class WarehouseServiceTest {
                 "01012345678"
         );
 
-        Warehouse savedWarehouse = warehouseService.save(request);
-        Long warehouseId = savedWarehouse.getWarehouseId();
+        WarehouseResponse savedWarehouse = warehouseService.save(request);
+        Long warehouseId = savedWarehouse.id();
 
         // when
-        Warehouse result = warehouseService.findById(warehouseId);
+        WarehouseResponse result = warehouseService.findById(warehouseId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getWarehouseId()).isEqualTo(warehouseId);
-        assertThat(result.getName()).isEqualTo("테스트 창고");
-        assertThat(result.getPostcode()).isEqualTo("12345");
-        assertThat(result.getDetailAddress()).isEqualTo("");
-        assertThat(result.getManagerName()).isEqualTo("홍길동");
-        assertThat(result.getManagerContact()).isEqualTo("01012345678");
+        assertThat(result.id()).isEqualTo(warehouseId);
+        assertThat(result.name()).isEqualTo("테스트 창고");
+        assertThat(result.postcode()).isEqualTo("12345");
+        assertThat(result.managerName()).isEqualTo("홍길동");
+        assertThat(result.managerContact()).isEqualTo("01012345678");
     }
 
     @DisplayName("존재하지 않는 ID로 창고 조회 시 예외가 발생한다")
@@ -216,7 +198,7 @@ class WarehouseServiceTest {
                 "01012345678"
         );
 
-        Warehouse savedWarehouse = warehouseService.save(request);
+        WarehouseResponse savedWarehouse = warehouseService.save(request);
 
         UpdateWarehouseRequest updateRequest = new UpdateWarehouseRequest(
                 "수정된 창고",
@@ -228,16 +210,16 @@ class WarehouseServiceTest {
         );
 
         // when
-        Warehouse result = warehouseService.update(savedWarehouse.getWarehouseId(), updateRequest);
+        WarehouseResponse result = warehouseService.update(savedWarehouse.id(), updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("수정된 창고");
-        assertThat(result.getPostcode()).isEqualTo("54321");
-        assertThat(result.getBaseAddress()).isEqualTo("서울시 서초구 테헤란로 456");
-        assertThat(result.getDetailAddress()).isEqualTo("789호");
-        assertThat(result.getManagerName()).isEqualTo("김관리");
-        assertThat(result.getManagerContact()).isEqualTo("01098765432");
+        assertThat(result.name()).isEqualTo("수정된 창고");
+        assertThat(result.postcode()).isEqualTo("54321");
+        assertThat(result.baseAddress()).isEqualTo("서울시 서초구 테헤란로 456");
+        assertThat(result.detailAddress()).isEqualTo("789호");
+        assertThat(result.managerName()).isEqualTo("김관리");
+        assertThat(result.managerContact()).isEqualTo("01098765432");
     }
 
     @DisplayName("존재하지 않는 창고 수정 시 예외가 발생한다")
@@ -274,13 +256,13 @@ class WarehouseServiceTest {
                 "01012345678"
         );
 
-        Warehouse savedWarehouse = warehouseService.save(request);
+        WarehouseResponse savedWarehouse = warehouseService.save(request);
 
         // when
-        warehouseService.deleteById(savedWarehouse.getWarehouseId());
+        warehouseService.deleteById(savedWarehouse.id());
 
         // then
-        assertThat(warehouseRepository.findById(savedWarehouse.getWarehouseId())).isEmpty();
+        assertThat(warehouseRepository.findById(savedWarehouse.id())).isEmpty();
     }
 
     @DisplayName("존재하지 않는 창고 삭제 시 예외가 발생한다")
