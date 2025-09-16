@@ -42,7 +42,7 @@ public class ProductService {
         }
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Supplier supplier = supplierRepository.findById(product.getProductId())
+        Supplier supplier = supplierRepository.findById(product.getSupplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         return ProductResponse.from(product, supplier);
@@ -58,7 +58,7 @@ public class ProductService {
         }
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Supplier supplier = supplierRepository.findById(existingProduct.getProductId())
+        Supplier supplier = supplierRepository.findById(existingProduct.getSupplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         return ProductResponse.from(existingProduct.update(request.productName(), request.thumbnailUrl()), supplier);

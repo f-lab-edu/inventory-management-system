@@ -5,7 +5,6 @@ import inventory.common.dto.response.PageResponse;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.controller.response.InboundResponse;
-import inventory.inbound.domain.Inbound;
 import inventory.inbound.service.InboundService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,8 +31,7 @@ public class InboundController {
     @PostMapping
     public ResponseEntity<ApiResponse<InboundResponse>> createInbound(
             @Valid @RequestBody CreateInboundRequest request) {
-        Inbound savedInbound = inboundService.save(request);
-        InboundResponse response = InboundResponse.from(savedInbound);
+        InboundResponse response = inboundService.save(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED, response));
@@ -41,8 +39,7 @@ public class InboundController {
 
     @GetMapping("{id}")
     public ResponseEntity<ApiResponse<InboundResponse>> getInbound(@PathVariable Long id) {
-        Inbound inbound = inboundService.findById(id);
-        InboundResponse response = InboundResponse.from(inbound);
+        InboundResponse response = inboundService.findById(id);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -52,18 +49,14 @@ public class InboundController {
             @RequestParam(defaultValue = "0") int currentPageNumber,
             @RequestParam(defaultValue = "50") int pageSize) {
 
-        List<Inbound> inbounds = inboundService.findAll();
+        List<InboundResponse> inbounds = inboundService.findAll();
 
         int startIndex = currentPageNumber * pageSize;
         int endIndex = Math.min(startIndex + pageSize, inbounds.size());
-        List<Inbound> pagedInbounds = inbounds.subList(startIndex, endIndex);
-
-        List<InboundResponse> responses = pagedInbounds.stream()
-                .map(InboundResponse::from)
-                .toList();
+        List<InboundResponse> pagedInbounds = inbounds.subList(startIndex, endIndex);
 
         PageResponse<InboundResponse> pageResponse = PageResponse.of(
-                responses, currentPageNumber, pageSize, inbounds.size());
+                pagedInbounds, currentPageNumber, pageSize, inbounds.size());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
@@ -73,8 +66,7 @@ public class InboundController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateInboundStatusRequest request) {
 
-        Inbound updatedInbound = inboundService.updateStatus(id, request);
-        InboundResponse response = InboundResponse.from(updatedInbound);
+        InboundResponse response = inboundService.updateStatus(id, request);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

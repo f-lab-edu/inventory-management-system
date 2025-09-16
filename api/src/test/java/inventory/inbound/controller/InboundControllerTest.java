@@ -5,8 +5,7 @@ import inventory.common.exception.GlobalExceptionHandler;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.InboundProductRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
-import inventory.inbound.domain.Inbound;
-import inventory.inbound.domain.InboundProduct;
+import inventory.inbound.controller.response.InboundResponse;
 import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.service.InboundService;
 import org.junit.jupiter.api.DisplayName;
@@ -53,14 +52,10 @@ class InboundControllerTest {
                 List.of(new InboundProductRequest(1L, 100))
         );
 
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound savedInbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
+        InboundResponse savedInbound = new InboundResponse(
+                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
+        );
 
         when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInbound);
 
@@ -84,14 +79,10 @@ class InboundControllerTest {
     void getInboundWithSuccess() throws Exception {
         // given
         Long inboundId = 1L;
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound inbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
+        InboundResponse inbound = new InboundResponse(
+                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
+        );
 
         when(inboundService.findById(inboundId)).thenReturn(inbound);
 
@@ -110,14 +101,10 @@ class InboundControllerTest {
     @Test
     void searchInboundsWithSuccess() throws Exception {
         // given
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound inbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
+        InboundResponse inbound = new InboundResponse(
+                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.REGISTERED
+        );
 
         when(inboundService.findAll()).thenReturn(List.of(inbound));
 
@@ -139,14 +126,10 @@ class InboundControllerTest {
         Long inboundId = 1L;
         UpdateInboundStatusRequest request = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
 
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound updatedInbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.INSPECTING)
-                .build();
+        InboundResponse.InboundProductResponse product = new InboundResponse.InboundProductResponse(1L, 100);
+        InboundResponse updatedInbound = new InboundResponse(
+                1L, 1L, 1L, LocalDate.now().plusDays(7), List.of(product), InboundStatus.INSPECTING
+        );
 
         when(inboundService.updateStatus(eq(inboundId), any(UpdateInboundStatusRequest.class)))
                 .thenReturn(updatedInbound);

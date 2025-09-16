@@ -4,6 +4,7 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
+import inventory.inbound.controller.response.InboundResponse;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.enums.InboundStatus;
@@ -24,7 +25,7 @@ public class InboundService {
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
 
-    public Inbound save(CreateInboundRequest request) {
+    public InboundResponse save(CreateInboundRequest request) {
         warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
@@ -48,28 +49,33 @@ public class InboundService {
                 .status(InboundStatus.REGISTERED)
                 .build();
 
-        return inboundRepository.save(inbound);
+        Inbound savedInbound = inboundRepository.save(inbound);
+        return InboundResponse.from(savedInbound);
     }
 
-    public Inbound findById(Long id) {
+    public InboundResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        return inboundRepository.findById(id)
+        Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        return InboundResponse.from(inbound);
     }
 
-    public List<Inbound> findAll() {
-        return inboundRepository.findAll();
+    public List<InboundResponse> findAll() {
+        return inboundRepository.findAll().stream()
+                .map(InboundResponse::from)
+                .toList();
     }
 
-    public Inbound updateStatus(Long id, UpdateInboundStatusRequest request) {
+    public InboundResponse updateStatus(Long id, UpdateInboundStatusRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        Inbound existingInbound = findById(id);
+        Inbound existingInbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         Inbound updateData = Inbound.builder()
                 .warehouseId(existingInbound.getWarehouseId())
@@ -79,7 +85,8 @@ public class InboundService {
                 .status(request.status())
                 .build();
 
-        return existingInbound.updateStatus(updateData);
+        Inbound updatedInbound = existingInbound.updateStatus(updateData);
+        return InboundResponse.from(updatedInbound);
     }
 
     public void deleteById(Long id) {

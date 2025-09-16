@@ -5,10 +5,10 @@ import inventory.common.exception.ExceptionCode;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.InboundProductRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
+import inventory.inbound.controller.response.InboundResponse;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.repository.InboundRepository;
-import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
@@ -96,7 +96,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.of(2025, 9, 16),
                 List.of(
                         new InboundProductRequest(testProduct1.getProductId(), 10),
                         new InboundProductRequest(testProduct2.getProductId(), 20)
@@ -104,24 +104,20 @@ class InboundServiceTest {
         );
 
         // when
-        Inbound result = inboundService.save(request);
+        InboundResponse result = inboundService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isNotNull();
-        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId());
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId());
-        assertThat(result.getExpectedDate()).isEqualTo(LocalDate.of(2024, 1, 15));
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
-        assertThat(result.getProducts()).hasSize(2);
-        assertThat(result.getProducts().get(0).productId()).isEqualTo(testProduct1.getProductId());
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
-        assertThat(result.getProducts().get(1).productId()).isEqualTo(testProduct2.getProductId());
-        assertThat(result.getProducts().get(1).quantity()).isEqualTo(20);
-
-        Inbound savedInbound = inboundRepository.findById(result.getInboundId()).orElse(null);
-        assertThat(savedInbound).isNotNull();
-        assertThat(savedInbound.getStatus()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.id()).isNotNull();
+        assertThat(result.warehouseId()).isEqualTo(testWarehouse.getWarehouseId());
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId());
+        assertThat(result.expectedDate()).isEqualTo(LocalDate.of(2025, 9, 16));
+        assertThat(result.status()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.products()).hasSize(2);
+        assertThat(result.products().get(0).productId()).isEqualTo(testProduct1.getProductId());
+        assertThat(result.products().get(0).quantity()).isEqualTo(10);
+        assertThat(result.products().get(1).productId()).isEqualTo(testProduct2.getProductId());
+        assertThat(result.products().get(1).quantity()).isEqualTo(20);
     }
 
     @DisplayName("존재하지 않는 창고로 입고 생성 시 예외가 발생한다")
@@ -132,7 +128,7 @@ class InboundServiceTest {
         Product testProduct = createTestProduct(testSupplier.getSupplierId(), "상품1", "PROD003");
 
         CreateInboundRequest request = new CreateInboundRequest(
-                999L, // 존재하지 않는 창고 ID
+                999L,
                 testSupplier.getSupplierId(),
                 LocalDate.of(2024, 1, 15),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
@@ -199,18 +195,18 @@ class InboundServiceTest {
                 LocalDate.of(2024, 1, 15),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(request);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.id();
 
         // when
-        Inbound result = inboundService.findById(inboundId);
+        InboundResponse result = inboundService.findById(inboundId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isEqualTo(inboundId);
-        assertThat(result.getProducts()).hasSize(1);
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.id()).isEqualTo(inboundId);
+        assertThat(result.products()).hasSize(1);
+        assertThat(result.products().get(0).quantity()).isEqualTo(10);
+        assertThat(result.status()).isEqualTo(InboundStatus.REGISTERED);
     }
 
     @DisplayName("존재하지 않는 입고 ID로 조회 시 예외가 발생한다")
@@ -263,12 +259,12 @@ class InboundServiceTest {
         inboundService.save(request2);
 
         // when
-        List<Inbound> result = inboundService.findAll();
+        List<InboundResponse> result = inboundService.findAll();
 
         // then
         assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
-        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
+        assertThat(result.stream().anyMatch(i -> i.expectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
+        assertThat(result.stream().anyMatch(i -> i.expectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
     }
 
     @DisplayName("입고 상태 수정을 성공하면 수정된 입고 정보를 반환한다")
@@ -285,22 +281,22 @@ class InboundServiceTest {
                 LocalDate.of(2024, 1, 15),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(createRequest);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.id();
 
         UpdateInboundStatusRequest updateRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
 
         // when
-        Inbound result = inboundService.updateStatus(inboundId, updateRequest);
+        InboundResponse result = inboundService.updateStatus(inboundId, updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isEqualTo(inboundId);
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.INSPECTING);
-        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId()); // 업데이트되지 않음
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
-        assertThat(result.getProducts()).hasSize(1); // 업데이트되지 않음
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10); // 업데이트되지 않음
+        assertThat(result.id()).isEqualTo(inboundId);
+        assertThat(result.status()).isEqualTo(InboundStatus.INSPECTING);
+        assertThat(result.warehouseId()).isEqualTo(testWarehouse.getWarehouseId()); // 업데이트되지 않음
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
+        assertThat(result.products()).hasSize(1); // 업데이트되지 않음
+        assertThat(result.products().get(0).quantity()).isEqualTo(10); // 업데이트되지 않음
 
         Inbound updatedInbound = inboundRepository.findById(inboundId).orElse(null);
         assertThat(updatedInbound).isNotNull();
@@ -346,8 +342,8 @@ class InboundServiceTest {
                 LocalDate.of(2024, 1, 15),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(request);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.id();
 
         // when
         inboundService.deleteById(inboundId);
