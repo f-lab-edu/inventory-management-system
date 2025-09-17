@@ -17,6 +17,7 @@ import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.service.WarehouseStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,7 @@ public class InboundService {
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
+    private final WarehouseStockService warehouseStockService;
 
     public InboundResponse save(CreateInboundRequest request) {
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
@@ -118,7 +120,12 @@ public class InboundService {
         // 변경사항 저장
         Inbound savedInbound = inboundRepository.save(inbound);
 
-        // 업데이트된 InboundResponse 생성
+        // 입고 완료 시 창고 재고 업데이트
+        if (request.status() == InboundStatus.COMPLETED) {
+            updateWarehouseStockOnInboundCompletion(savedInbound);
+        }
+
+        // 새로 InboundResponse 생성
         Warehouse warehouse = warehouseRepository.findById(savedInbound.getWarehouseId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
@@ -168,5 +175,22 @@ public class InboundService {
         }
 
         inboundRepository.deleteById(id);
+    }
+
+    /**
+     * 입고 완료 시 창고 재고를 업데이트합니다.
+     */
+    private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
+        List<InboundProduct> inboundProducts = inboundProductRepository.findAll().stream()
+                .filter(ip -> ip.getInboundId().equals(inbound.getInboundId()))
+                .toList();
+
+        for (InboundProduct inboundProduct : inboundProducts) {
+            warehouseStockService.updateStockOnInbound(
+                    inbound.getWarehouseId(),
+                    inboundProduct.getProductId(),
+                    inboundProduct.getQuantity()
+            );
+        }
     }
 }

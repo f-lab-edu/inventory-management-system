@@ -1,19 +1,35 @@
 package inventory.warehouse.controller.response;
 
+import inventory.product.domain.Product;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.domain.WarehouseStock;
+
+import java.time.LocalDateTime;
+
 public record WarehouseStockResponse(
+        Long warehouseStockId,
         Long warehouseId,
         String warehouseName,
-        Long quantity,
-        Long safetyStock,
-        String warehouseAddress
+        Long productId,
+        String productName,
+        String productCode,
+        int quantity,
+        int safetyStock,
+        boolean isBelowSafetyStock,
+        LocalDateTime lastUpdatedAt
 ) {
-    public static WarehouseStockResponse of(
-            final Long warehouseId,
-            final String warehouseName,
-            final Long quantity,
-            final Long safetyStock,
-            final String warehouseAddress
-    ) {
-        return new WarehouseStockResponse(warehouseId, warehouseName, quantity, safetyStock, warehouseAddress);
+    public static WarehouseStockResponse from(WarehouseStock warehouseStock, Warehouse warehouse, Product product) {
+        return new WarehouseStockResponse(
+                warehouseStock.getWarehouseStockId(),
+                warehouseStock.getWarehouseId(),
+                warehouse.getName(),
+                warehouseStock.getProductId(),
+                product.getProductName(),
+                product.getProductCode(),
+                warehouseStock.getQuantity(),
+                warehouseStock.getSafetyStock(),
+                warehouseStock.isBelowSafetyStock(),
+                warehouseStock.getModifiedAt()
+        );
     }
 }

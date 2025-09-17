@@ -15,7 +15,9 @@ import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.domain.WarehouseStock;
 import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.repository.WarehouseStockRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,9 @@ class InboundServiceTest {
 
     @Autowired
     private InboundProductRepository inboundProductRepository;
+
+    @Autowired
+    private WarehouseStockRepository warehouseStockRepository;
 
     private Warehouse createTestWarehouse(String name) {
         Warehouse warehouse = Warehouse.builder()
@@ -379,5 +384,207 @@ class InboundServiceTest {
         assertThatThrownBy(() -> inboundService.deleteById(null))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
+    }
+
+    @DisplayName("입고 완료 시 기존 상품의 재고가 증가한다")
+    @Test
+    void updateStatusToCompletedIncreasesExistingStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("재고 증가 테스트 창고");
+        Supplier testSupplier = createTestSupplier("재고 증가 테스트 공급업체", "1234567898");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "재고 증가 테스트 상품", "PROD010");
+
+        // 기존 재고 생성 (수량 50)
+        WarehouseStock existingStock = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct.getProductId())
+                .quantity(50)
+                .safetyStock(10)
+                .build();
+        warehouseStockRepository.save(existingStock);
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 30))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.id();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 재고 확인
+        WarehouseStock updatedStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(updatedStock).isNotNull();
+        assertThat(updatedStock.getQuantity()).isEqualTo(80); // 50 + 30
+        assertThat(updatedStock.getSafetyStock()).isEqualTo(10); // 안전재고는 변경되지 않음
+    }
+
+    @DisplayName("입고 완료 시 새로운 상품의 재고가 생성된다")
+    @Test
+    void updateStatusToCompletedCreatesNewStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("신규 재고 테스트 창고");
+        Supplier testSupplier = createTestSupplier("신규 재고 테스트 공급업체", "1234567899");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "신규 재고 테스트 상품", "PROD011");
+
+        // 기존 재고가 없는 상태에서 시작
+        assertThat(warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId()))
+                .isEmpty();
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 25))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.id();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 새로운 재고 생성 확인
+        WarehouseStock newStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(newStock).isNotNull();
+        assertThat(newStock.getQuantity()).isEqualTo(25); // 입고 수량과 동일
+        assertThat(newStock.getSafetyStock()).isEqualTo(0); // 기본 안전재고 0
+    }
+
+    @DisplayName("입고 완료 시 여러 상품의 재고가 동시에 업데이트된다")
+    @Test
+    void updateStatusToCompletedUpdatesMultipleProducts() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("다중 재고 테스트 창고");
+        Supplier testSupplier = createTestSupplier("다중 재고 테스트 공급업체", "1234567900");
+        Product testProduct1 = createTestProduct(testSupplier.getSupplierId(), "다중 재고 테스트 상품1", "PROD012");
+        Product testProduct2 = createTestProduct(testSupplier.getSupplierId(), "다중 재고 테스트 상품2", "PROD013");
+
+        // 첫 번째 상품은 기존 재고 있음 (수량 100)
+        WarehouseStock existingStock1 = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct1.getProductId())
+                .quantity(100)
+                .safetyStock(20)
+                .build();
+        warehouseStockRepository.save(existingStock1);
+
+        // 두 번째 상품은 기존 재고 없음
+        assertThat(warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct2.getProductId()))
+                .isEmpty();
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(
+                        new InboundProductRequest(testProduct1.getProductId(), 40), // 기존 재고 증가
+                        new InboundProductRequest(testProduct2.getProductId(), 60)  // 신규 재고 생성
+                )
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.id();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 첫 번째 상품 재고 확인 (기존 재고 증가)
+        WarehouseStock updatedStock1 = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct1.getProductId())
+                .orElse(null);
+
+        assertThat(updatedStock1).isNotNull();
+        assertThat(updatedStock1.getQuantity()).isEqualTo(140); // 100 + 40
+        assertThat(updatedStock1.getSafetyStock()).isEqualTo(20); // 안전재고 유지
+
+        // 두 번째 상품 재고 확인 (신규 재고 생성)
+        WarehouseStock newStock2 = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct2.getProductId())
+                .orElse(null);
+
+        assertThat(newStock2).isNotNull();
+        assertThat(newStock2.getQuantity()).isEqualTo(60); // 입고 수량과 동일
+        assertThat(newStock2.getSafetyStock()).isEqualTo(0); // 기본 안전재고 0
+    }
+
+    @DisplayName("입고 거절 시 재고는 변경되지 않는다")
+    @Test
+    void updateStatusToRejectedDoesNotChangeStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("재고 미변경 테스트 창고");
+        Supplier testSupplier = createTestSupplier("재고 미변경 테스트 공급업체", "1234567901");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "재고 미변경 테스트 상품", "PROD014");
+
+        // 기존 재고 생성 (수량 30)
+        WarehouseStock existingStock = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct.getProductId())
+                .quantity(30)
+                .safetyStock(5)
+                .build();
+        warehouseStockRepository.save(existingStock);
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 20))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.id();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 거절로 상태 변경
+        UpdateInboundStatusRequest rejectedRequest = new UpdateInboundStatusRequest(InboundStatus.REJECTED);
+        InboundResponse result = inboundService.updateStatus(inboundId, rejectedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.REJECTED);
+
+        // 재고가 변경되지 않았는지 확인
+        WarehouseStock unchangedStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(unchangedStock).isNotNull();
+        assertThat(unchangedStock.getQuantity()).isEqualTo(30); // 기존 재고 유지
+        assertThat(unchangedStock.getSafetyStock()).isEqualTo(5); // 안전재고 유지
     }
 }
