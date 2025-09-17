@@ -1,4 +1,4 @@
-package inventory.supplier.controller.response;
+package inventory.supplier.service.response;
 
 import inventory.supplier.domain.Supplier;
 

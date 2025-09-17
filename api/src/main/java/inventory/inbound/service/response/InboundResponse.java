@@ -1,7 +1,7 @@
-package inventory.inbound.controller.response;
+package inventory.inbound.service.response;
 
 import inventory.inbound.domain.Inbound;
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
 import inventory.supplier.domain.Supplier;
 import inventory.warehouse.domain.Warehouse;
 

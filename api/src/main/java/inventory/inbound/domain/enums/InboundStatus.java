@@ -1,4 +1,4 @@
-package inventory.inbound.enums;
+package inventory.inbound.domain.enums;
 
 import lombok.Getter;
 

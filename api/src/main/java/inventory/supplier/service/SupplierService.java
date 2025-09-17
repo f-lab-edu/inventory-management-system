@@ -2,9 +2,9 @@ package inventory.supplier.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.supplier.controller.request.CreateSupplierRequest;
-import inventory.supplier.controller.request.UpdateSupplierRequest;
-import inventory.supplier.controller.response.SupplierResponse;
+import inventory.supplier.service.request.CreateSupplierRequest;
+import inventory.supplier.service.request.UpdateSupplierRequest;
+import inventory.supplier.service.response.SupplierResponse;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;

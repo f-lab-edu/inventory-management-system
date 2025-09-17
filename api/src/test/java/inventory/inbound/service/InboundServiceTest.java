@@ -2,12 +2,12 @@ package inventory.inbound.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.inbound.controller.request.CreateInboundRequest;
-import inventory.inbound.controller.request.InboundProductRequest;
-import inventory.inbound.controller.request.UpdateInboundStatusRequest;
-import inventory.inbound.controller.response.InboundResponse;
+import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.InboundProductRequest;
+import inventory.inbound.service.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.response.InboundResponse;
 import inventory.inbound.domain.Inbound;
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundProductRepository;
 import inventory.inbound.repository.InboundRepository;
 import inventory.product.domain.Product;

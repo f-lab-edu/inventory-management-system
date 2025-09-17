@@ -2,9 +2,9 @@ package inventory.supplier.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
-import inventory.supplier.controller.request.CreateSupplierRequest;
-import inventory.supplier.controller.request.UpdateSupplierRequest;
-import inventory.supplier.controller.response.SupplierResponse;
+import inventory.supplier.service.request.CreateSupplierRequest;
+import inventory.supplier.service.request.UpdateSupplierRequest;
+import inventory.supplier.service.response.SupplierResponse;
 import inventory.supplier.service.SupplierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

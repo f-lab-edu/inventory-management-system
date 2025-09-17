@@ -2,9 +2,9 @@ package inventory.warehouse.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
-import inventory.warehouse.controller.request.CreateWarehouseRequest;
-import inventory.warehouse.controller.request.UpdateWarehouseRequest;
-import inventory.warehouse.controller.response.WarehouseResponse;
+import inventory.warehouse.service.request.CreateWarehouseRequest;
+import inventory.warehouse.service.request.UpdateWarehouseRequest;
+import inventory.warehouse.service.response.WarehouseResponse;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.service.WarehouseService;
 import jakarta.validation.Valid;

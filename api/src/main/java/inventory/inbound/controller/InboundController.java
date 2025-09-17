@@ -2,9 +2,9 @@ package inventory.inbound.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
-import inventory.inbound.controller.request.CreateInboundRequest;
-import inventory.inbound.controller.request.UpdateInboundStatusRequest;
-import inventory.inbound.controller.response.InboundResponse;
+import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.response.InboundResponse;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.service.InboundService;
 import jakarta.validation.Valid;

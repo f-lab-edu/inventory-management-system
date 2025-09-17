@@ -1,4 +1,4 @@
-package inventory.inbound.controller.response;
+package inventory.inbound.service.response;
 
 import inventory.inbound.domain.InboundProduct;
 import inventory.product.domain.Product;

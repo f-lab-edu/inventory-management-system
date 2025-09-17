@@ -2,9 +2,9 @@ package inventory.supplier.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
-import inventory.supplier.controller.request.CreateSupplierRequest;
-import inventory.supplier.controller.request.UpdateSupplierRequest;
-import inventory.supplier.controller.response.SupplierResponse;
+import inventory.supplier.service.request.CreateSupplierRequest;
+import inventory.supplier.service.request.UpdateSupplierRequest;
+import inventory.supplier.service.response.SupplierResponse;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.service.SupplierService;
 import org.junit.jupiter.api.DisplayName;

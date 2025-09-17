@@ -1,4 +1,4 @@
-package inventory.warehouse.controller.response;
+package inventory.warehouse.service.response;
 
 import inventory.product.domain.Product;
 import inventory.warehouse.domain.Warehouse;
