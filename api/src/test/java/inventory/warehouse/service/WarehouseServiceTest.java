@@ -2,9 +2,9 @@ package inventory.warehouse.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.warehouse.controller.request.CreateWarehouseRequest;
-import inventory.warehouse.controller.request.UpdateWarehouseRequest;
-import inventory.warehouse.controller.response.WarehouseResponse;
+import inventory.warehouse.service.request.CreateWarehouseRequest;
+import inventory.warehouse.service.request.UpdateWarehouseRequest;
+import inventory.warehouse.service.response.WarehouseResponse;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
 import jakarta.transaction.Transactional;

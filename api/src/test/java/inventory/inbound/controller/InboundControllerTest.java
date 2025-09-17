@@ -2,12 +2,13 @@ package inventory.inbound.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
-import inventory.inbound.controller.request.CreateInboundRequest;
-import inventory.inbound.controller.request.InboundProductRequest;
-import inventory.inbound.controller.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.InboundProductRequest;
+import inventory.inbound.service.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.response.InboundResponse;
+import inventory.inbound.service.response.InboundProductResponse;
 import inventory.inbound.domain.Inbound;
-import inventory.inbound.domain.InboundProduct;
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.service.InboundService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,16 +54,14 @@ class InboundControllerTest {
                 List.of(new InboundProductRequest(1L, 100))
         );
 
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound savedInbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundResponse savedInboundResponse = new InboundResponse(
+                1L, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.REGISTERED
+        );
 
-        when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInbound);
+        when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInboundResponse);
 
         // when & then
         mockMvc.perform(post(BASE_URL)
@@ -84,16 +83,14 @@ class InboundControllerTest {
     void getInboundWithSuccess() throws Exception {
         // given
         Long inboundId = 1L;
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound inbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundResponse inboundResponse = new InboundResponse(
+                inboundId, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.REGISTERED
+        );
 
-        when(inboundService.findById(inboundId)).thenReturn(inbound);
+        when(inboundService.findById(inboundId)).thenReturn(inboundResponse);
 
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + inboundId))
@@ -110,15 +107,14 @@ class InboundControllerTest {
     @Test
     void searchInboundsWithSuccess() throws Exception {
         // given
-        InboundProduct product = new InboundProduct(1L, 100);
         Inbound inbound = Inbound.builder()
                 .warehouseId(1L)
                 .supplierId(1L)
                 .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
                 .status(InboundStatus.REGISTERED)
                 .build();
 
+        // findAll() 메서드는 현재 Inbound 리스트를 반환하므로 그대로 사용
         when(inboundService.findAll()).thenReturn(List.of(inbound));
 
         // when & then
@@ -138,18 +134,16 @@ class InboundControllerTest {
         // given
         Long inboundId = 1L;
         UpdateInboundStatusRequest request = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
-
-        InboundProduct product = new InboundProduct(1L, 100);
-        Inbound updatedInbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .products(List.of(product))
-                .status(InboundStatus.INSPECTING)
-                .build();
+        
+        InboundResponse updatedResponse = new InboundResponse(
+                inboundId, 1L, "창고명", 1L, "공급업체명", 
+                LocalDate.now().plusDays(7), 
+                List.of(new InboundProductResponse(1L, "상품명", 100)),
+                InboundStatus.INSPECTING
+        );
 
         when(inboundService.updateStatus(eq(inboundId), any(UpdateInboundStatusRequest.class)))
-                .thenReturn(updatedInbound);
+                .thenReturn(updatedResponse);
 
         // when & then
         mockMvc.perform(put(BASE_URL + "/" + inboundId + "/status")

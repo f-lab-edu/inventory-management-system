@@ -1,4 +1,4 @@
-package inventory.product.controller.request;
+package inventory.product.service.request;
 
 import jakarta.validation.constraints.NotBlank;
 

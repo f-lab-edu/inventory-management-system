@@ -2,9 +2,9 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.product.controller.request.CreateProductRequest;
-import inventory.product.controller.request.UpdateProductRequest;
-import inventory.product.controller.response.ProductResponse;
+import inventory.product.service.request.CreateProductRequest;
+import inventory.product.service.request.UpdateProductRequest;
+import inventory.product.service.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
@@ -42,7 +42,7 @@ public class ProductService {
         }
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Supplier supplier = supplierRepository.findById(product.getProductId())
+        Supplier supplier = supplierRepository.findById(product.getSupplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         return ProductResponse.from(product, supplier);
@@ -58,7 +58,7 @@ public class ProductService {
         }
         Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Supplier supplier = supplierRepository.findById(existingProduct.getProductId())
+        Supplier supplier = supplierRepository.findById(existingProduct.getSupplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         return ProductResponse.from(existingProduct.update(request.productName(), request.thumbnailUrl()), supplier);

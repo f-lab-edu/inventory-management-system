@@ -1,6 +1,6 @@
-package inventory.inbound.controller.request;
+package inventory.inbound.service.request;
 
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record UpdateInboundStatusRequest(

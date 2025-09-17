@@ -2,9 +2,9 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.product.controller.request.CreateProductRequest;
-import inventory.product.controller.request.UpdateProductRequest;
-import inventory.product.controller.response.ProductResponse;
+import inventory.product.service.request.CreateProductRequest;
+import inventory.product.service.request.UpdateProductRequest;
+import inventory.product.service.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;

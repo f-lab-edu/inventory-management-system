@@ -1,4 +1,4 @@
-package inventory.inbound.controller.request;
+package inventory.inbound.service.request;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;

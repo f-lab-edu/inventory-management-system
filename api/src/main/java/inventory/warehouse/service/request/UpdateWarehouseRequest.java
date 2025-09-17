@@ -1,4 +1,4 @@
-package inventory.warehouse.controller.request;
+package inventory.warehouse.service.request;
 
 public record UpdateWarehouseRequest(
         String name,

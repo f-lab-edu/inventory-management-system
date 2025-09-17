@@ -1,4 +1,4 @@
-package inventory.supplier.controller.request;
+package inventory.supplier.service.request;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
