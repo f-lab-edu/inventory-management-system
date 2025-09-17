@@ -14,9 +14,12 @@ Spring Boot 기반의 재고 관리 시스템입니다.
 
 - [Gradle에서 allProjects와 subProjects를 권장하지 않는 이유와 대체 방안](https://github.com/f-lab-edu/inventory-management-system/wiki/Gradle%EC%97%90%EC%84%9C-allProjects%EC%99%80-subProjects%EB%A5%BC-%EA%B6%8C%EC%9E%A5%ED%95%98%EC%A7%80-%EC%95%8A%EB%8A%94-%EC%9D%B4%EC%9C%A0%EC%99%80-%EB%8C%80%EC%B2%B4-%EB%B0%A9%EC%95%88)
 
+- [Docker 명령어와 Dockerfile, DockerCompose](https://github.com/f-lab-edu/inventory-management-system/wiki/Dokcer)
+
 ## 주요 도메인
 
 - **창고 (Warehouse)**: 물리적 창고 정보 관리
+- **재고 (WarehouseStock)**: 창고별 상품 재고 관리
 - **공급업체 (Supplier)**: 공급업체 정보 관리
 - **상품 (Product)**: 상품 마스터 정보 관리
 - **입고 (Inbound)**: 입고 프로세스 및 재고 관리
@@ -29,7 +32,6 @@ graph TD
     B --> C[REGISTERED<br/>입고 등록 완료]
     C --> D[검수 시작]
     D --> E[INSPECTING<br/>검수 진행 중]
-    E --> F{검수 결과}
     F -->|검수 통과| G[COMPLETED<br/>입고 완료]
     F -->|검수 실패| H[REJECTED<br/>입고 거절]
     G --> I[재고 반영]
