@@ -41,8 +41,8 @@ public record WarehouseResponse(
                 warehouse.getManagerName(),
                 warehouse.getManagerContact(),
                 warehouse.isActive(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                warehouse.getCreatedAt(),
+                warehouse.getModifiedAt()
         );
     }
 }

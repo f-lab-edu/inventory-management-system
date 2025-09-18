@@ -2,17 +2,19 @@ package inventory.warehouse.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
-import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class WarehouseService {
 
@@ -62,8 +64,8 @@ public class WarehouseService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        findById(id);
-        warehouseRepository.deleteById(id);
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        warehouse.softDelete();
     }
 }
