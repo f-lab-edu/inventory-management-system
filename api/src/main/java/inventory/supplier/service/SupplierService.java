@@ -9,10 +9,12 @@ import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class SupplierService {
 
@@ -33,6 +35,7 @@ public class SupplierService {
         return SupplierResponse.from(supplierRepository.save(supplier));
     }
 
+    @Transactional(readOnly = true)
     public SupplierResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
@@ -42,9 +45,11 @@ public class SupplierService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
     }
 
+    @Transactional(readOnly = true)
     public List<SupplierResponse> findAll() {
         return supplierRepository.findAll()
-                .stream().map(SupplierResponse::from)
+                .stream()
+                .map(SupplierResponse::from)
                 .toList();
     }
 
