@@ -2,11 +2,12 @@ package inventory.inbound.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
+import inventory.inbound.domain.Inbound;
+import inventory.inbound.domain.enums.InboundStatus;
+import inventory.inbound.service.InboundService;
 import inventory.inbound.service.request.CreateInboundRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
 import inventory.inbound.service.response.InboundResponse;
-import inventory.inbound.domain.Inbound;
-import inventory.inbound.service.InboundService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -66,6 +67,14 @@ public class InboundController {
             @Valid @RequestBody UpdateInboundStatusRequest request) {
 
         InboundResponse response = inboundService.updateStatus(id, request);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("{id}/inspection")
+    public ResponseEntity<ApiResponse<InboundResponse>> updateInboundStatusToInspection(
+            @PathVariable Long id) {
+        InboundResponse response = inboundService.updateStatus(id, new UpdateInboundStatusRequest(InboundStatus.INSPECTING));
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }

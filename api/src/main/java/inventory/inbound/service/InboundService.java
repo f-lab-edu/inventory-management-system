@@ -8,6 +8,7 @@ import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundProductRepository;
 import inventory.inbound.repository.InboundRepository;
 import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.InboundProductRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
 import inventory.inbound.service.response.InboundProductResponse;
 import inventory.inbound.service.response.InboundResponse;
@@ -20,10 +21,14 @@ import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.service.WarehouseStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class InboundService {
 
@@ -35,70 +40,32 @@ public class InboundService {
     private final WarehouseStockService warehouseStockService;
 
     public InboundResponse save(CreateInboundRequest request) {
-        Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Warehouse warehouse = validateAndGetWarehouse(request.warehouseId());
+        Supplier supplier = validateAndGetSupplier(request.supplierId());
+        validateProducts(request.products());
 
-        Supplier supplier = supplierRepository.findById(request.supplierId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Inbound savedInbound = createAndSaveInbound(request);
+        saveInboundProducts(savedInbound.getInboundId(), request.products());
 
-        request.products().forEach(productRequest ->
-                productRepository.findById(productRequest.productId())
-                        .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
-
-        Inbound inbound = Inbound.builder()
-                .warehouseId(request.warehouseId())
-                .supplierId(request.supplierId())
-                .expectedDate(request.expectedDate())
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        Inbound savedInbound = inboundRepository.save(inbound);
-
-        request.products().forEach(productRequest -> {
-            InboundProduct inboundProduct = InboundProduct.builder()
-                    .inboundId(savedInbound.getInboundId())
-                    .productId(productRequest.productId())
-                    .quantity(productRequest.quantity())
-                    .build();
-
-            inboundProductRepository.save(inboundProduct);
-        });
-
-        List<InboundProduct> inboundProducts = inboundProductRepository.findAll().stream()
-                .filter(ip -> ip.getInboundId().equals(savedInbound.getInboundId()))
-                .toList();
-
-        List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
-
-        return InboundResponse.from(savedInbound, warehouse, supplier, inboundProductResponses);
+        return createInboundResponse(savedInbound, warehouse, supplier);
     }
 
+    @Transactional(readOnly = true)
     public InboundResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
+
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Warehouse warehouse = warehouseRepository.findById(inbound.getWarehouseId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        Supplier supplier = supplierRepository.findById(inbound.getSupplierId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());
-        List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
 
-        return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
+
+        return createInboundResponse(inbound, warehouse, supplier);
     }
 
-    private List<InboundProductResponse> convertToInboundProductResponses(List<InboundProduct> inboundProducts) {
-        return inboundProducts.stream()
-                .map(inboundProduct -> {
-                    Product product = productRepository.findById(inboundProduct.getProductId())
-                            .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-                    return InboundProductResponse.from(inboundProduct, product);
-                })
-                .toList();
-    }
-
+    @Transactional(readOnly = true)
     public List<Inbound> findAll() {
         return inboundRepository.findAll();
     }
@@ -111,79 +78,103 @@ public class InboundService {
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        // 상태 변경 규칙 검증
-        validateStatusTransition(inbound.getStatus(), request.status());
+        inbound.validateStatusTransition(inbound.getStatus(), request.status());
+        Inbound updatedInbound = inbound.updateStatus(request.status());
 
-        // 상태 업데이트
-        inbound.updateStatus(request.status());
-
-        // 변경사항 저장
-        Inbound savedInbound = inboundRepository.save(inbound);
-
-        // 입고 완료 시 창고 재고 업데이트
         if (request.status() == InboundStatus.COMPLETED) {
-            updateWarehouseStockOnInboundCompletion(savedInbound);
+            updateWarehouseStockOnInboundCompletion(inbound);
         }
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
 
-        // 새로 InboundResponse 생성
-        Warehouse warehouse = warehouseRepository.findById(savedInbound.getWarehouseId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-
-        Supplier supplier = supplierRepository.findById(savedInbound.getSupplierId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-
-        List<InboundProduct> inboundProducts = inboundProductRepository.findAll().stream()
-                .filter(ip -> ip.getInboundId().equals(savedInbound.getInboundId()))
-                .toList();
-
-        List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
-
-        return InboundResponse.from(savedInbound, warehouse, supplier, inboundProductResponses);
-    }
-
-    private void validateStatusTransition(InboundStatus currentStatus, InboundStatus newStatus) {
-        switch (currentStatus) {
-            case REGISTERED:
-                if (newStatus != InboundStatus.INSPECTING) {
-                    throw new CustomException(ExceptionCode.INVALID_INPUT,
-                            "입고 등록 상태에서는 검수 중으로만 변경 가능합니다.");
-                }
-                break;
-            case INSPECTING:
-                if (newStatus != InboundStatus.COMPLETED && newStatus != InboundStatus.REJECTED) {
-                    throw new CustomException(ExceptionCode.INVALID_INPUT,
-                            "검수 중 상태에서는 입고 완료 또는 입고 거절로만 변경 가능합니다.");
-                }
-                break;
-            case COMPLETED:
-            case REJECTED:
-                throw new CustomException(ExceptionCode.INVALID_INPUT,
-                        "입고 완료 또는 입고 거절 상태에서는 더 이상 상태 변경이 불가능합니다.");
-            default:
-                throw new CustomException(ExceptionCode.INVALID_INPUT,
-                        "알 수 없는 상태입니다.");
-        }
+        return createInboundResponse(updatedInbound, warehouse, supplier);
     }
 
     public void deleteById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        if (inboundRepository.findById(id).isEmpty()) {
-            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
-        }
-
-        inboundRepository.deleteById(id);
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.softDelete();
     }
 
-    /**
-     * 입고 완료 시 창고 재고를 업데이트합니다.
-     */
-    private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
-        List<InboundProduct> inboundProducts = inboundProductRepository.findAll().stream()
-                .filter(ip -> ip.getInboundId().equals(inbound.getInboundId()))
+    private Warehouse validateAndGetWarehouse(Long warehouseId) {
+        return warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    }
+
+    private Supplier validateAndGetSupplier(Long supplierId) {
+        return supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    }
+
+    private void validateProducts(List<InboundProductRequest> productRequests) {
+        List<Long> productIds = productRequests.stream()
+                .map(InboundProductRequest::productId)
                 .toList();
+
+        List<Product> products = productRepository.findByIds(productIds);
+
+        if (products.size() != productIds.size()) {
+            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
+        }
+    }
+
+    private Inbound createAndSaveInbound(CreateInboundRequest request) {
+        Inbound inbound = Inbound.builder()
+                .warehouseId(request.warehouseId())
+                .supplierId(request.supplierId())
+                .expectedDate(request.expectedDate())
+                .status(InboundStatus.REGISTERED)
+                .build();
+
+        return inboundRepository.save(inbound);
+    }
+
+    private void saveInboundProducts(Long inboundId, List<InboundProductRequest> productRequests) {
+        productRequests.forEach(productRequest -> {
+            InboundProduct inboundProduct = InboundProduct.builder()
+                    .inboundId(inboundId)
+                    .productId(productRequest.productId())
+                    .quantity(productRequest.quantity())
+                    .build();
+
+            inboundProductRepository.save(inboundProduct);
+        });
+    }
+
+    private List<InboundProductResponse> convertToInboundProductResponses(List<InboundProduct> inboundProducts) {
+        if (inboundProducts.isEmpty()) {
+            return List.of();
+        }
+        List<Long> productIds = inboundProducts.stream()
+                .map(InboundProduct::getProductId)
+                .distinct()
+                .toList();
+        List<Product> products = productRepository.findByIds(productIds);
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getProductId, p -> p));
+        return inboundProducts.stream()
+                .map(inboundProduct -> {
+                    Product product = productMap.get(inboundProduct.getProductId());
+                    if (product == null) {
+                        throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
+                    }
+                    return InboundProductResponse.from(inboundProduct, product);
+                })
+                .toList();
+    }
+
+    private InboundResponse createInboundResponse(Inbound inbound, Warehouse warehouse, Supplier supplier) {
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());
+        List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
+
+        return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
+    }
+
+    private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());
 
         for (InboundProduct inboundProduct : inboundProducts) {
             warehouseStockService.updateStockOnInbound(
