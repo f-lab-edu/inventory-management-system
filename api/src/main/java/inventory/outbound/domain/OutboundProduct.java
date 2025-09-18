@@ -1,4 +1,4 @@
-package inventory.inbound.domain;
+package inventory.outbound.domain;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,22 +12,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Entity
-public class InboundProduct {
+public class OutboundProduct {
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
-    private Long inboundProductId;
+    private Long outboundProductId;
+
+    private Long outboundId;
 
     private Long productId;
 
-    private Long inboundId;
-
-    private int quantity;
+    private int requestedQuantity;
 
     @Builder
-    public InboundProduct(Long productId, Long inboundId, int quantity) {
+    public OutboundProduct(Long outboundId, Long productId, int requestedQuantity) {
+        this.outboundId = outboundId;
         this.productId = productId;
-        this.inboundId = inboundId;
-        this.quantity = quantity;
+        this.requestedQuantity = requestedQuantity;
     }
 }

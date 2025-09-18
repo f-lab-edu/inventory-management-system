@@ -59,6 +59,21 @@ public class WarehouseStock {
         return this.quantity < this.safetyStock;
     }
 
+    public void decreaseStock(int amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("재고 차감량은 0보다 커야 합니다.");
+        }
+        if (this.quantity < amount) {
+            throw new IllegalArgumentException("재고가 부족합니다. 현재 재고: " + this.quantity + ", 요청 수량: " + amount);
+        }
+        this.quantity -= amount;
+        this.modifiedAt = LocalDateTime.now();
+    }
+
+    public boolean hasEnoughStock(int requestedQuantity) {
+        return this.quantity >= requestedQuantity;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) {
