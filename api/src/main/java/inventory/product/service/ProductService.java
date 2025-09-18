@@ -2,19 +2,21 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.product.domain.Product;
+import inventory.product.repository.ProductRepository;
 import inventory.product.service.request.CreateProductRequest;
 import inventory.product.service.request.UpdateProductRequest;
 import inventory.product.service.response.ProductResponse;
-import inventory.product.domain.Product;
-import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class ProductService {
 
@@ -36,6 +38,7 @@ public class ProductService {
         return ProductResponse.from(productRepository.save(product), supplier);
     }
 
+    @Transactional(readOnly = true)
     public ProductResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
@@ -48,6 +51,7 @@ public class ProductService {
         return ProductResponse.from(product, supplier);
     }
 
+    @Transactional(readOnly = true)
     public List<Product> findAll() {
         return productRepository.findAll();
     }
@@ -68,12 +72,9 @@ public class ProductService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        if (!productRepository.findById(id).isPresent()) {
-            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
-        }
-
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        product.softDelete();
     }
 }
 
