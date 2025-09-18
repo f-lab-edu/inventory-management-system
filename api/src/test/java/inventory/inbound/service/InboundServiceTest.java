@@ -1,273 +1,209 @@
 package inventory.inbound.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.inbound.controller.request.CreateInboundRequest;
 import inventory.inbound.controller.request.InboundProductRequest;
 import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.domain.Inbound;
-import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.repository.InboundRepository;
+import inventory.product.controller.request.CreateProductRequest;
 import inventory.product.domain.Product;
-import inventory.product.repository.ProductRepository;
+import inventory.product.service.ProductService;
+import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.domain.Supplier;
-import inventory.supplier.repository.SupplierRepository;
+import inventory.supplier.service.SupplierService;
+import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.repository.WarehouseRepository;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import inventory.warehouse.service.WarehouseService;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@ExtendWith(MockitoExtension.class)
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@ActiveProfiles("test")
+@Transactional
+@SpringBootTest
 class InboundServiceTest {
 
-    @Mock
+    @Autowired
     private InboundRepository inboundRepository;
 
-    @Mock
-    private WarehouseRepository warehouseRepository;
-
-    @Mock
-    private SupplierRepository supplierRepository;
-
-    @Mock
-    private ProductRepository productRepository;
-
-    @InjectMocks
+    @Autowired
     private InboundService inboundService;
+
+    @Autowired
+    private WarehouseService warehouseService;
+
+    @Autowired
+    private SupplierService supplierService;
+
+    @Autowired
+    private ProductService productService;
+
+    private Warehouse createTestWarehouse(String name) {
+        CreateWarehouseRequest warehouseRequest = new CreateWarehouseRequest(
+                name,
+                "12345",
+                "서울시 어딘가",
+                "상세주소",
+                "관리자",
+                "01012345678"
+        );
+        return warehouseService.save(warehouseRequest);
+    }
+
+    private Supplier createTestSupplier(String name, String businessRegistrationNumber) {
+        CreateSupplierRequest supplierRequest = new CreateSupplierRequest(
+                name,
+                businessRegistrationNumber,
+                "12345",
+                "서울시 어딘가",
+                "상세주소",
+                "대표",
+                "매니저",
+                "01012345678"
+        );
+        return supplierService.save(supplierRequest);
+    }
+
+    private Product createTestProduct(Long supplierId, String productName, String productCode) {
+        CreateProductRequest productRequest = new CreateProductRequest(
+                supplierId,
+                productName,
+                productCode,
+                "개",
+                "https://example.com/thumbnail.jpg"
+        );
+        return productService.save(productRequest);
+    }
 
     @DisplayName("입고 생성을 성공하면 저장된 입고 정보를 반환한다")
     @Test
     void saveWithSuccess() {
         // given
+        Warehouse testWarehouse = createTestWarehouse("테스트 창고");
+        Supplier testSupplier = createTestSupplier("테스트 공급업체", "1234567890");
+        Product testProduct1 = createTestProduct(testSupplier.getSupplierId(), "상품1", "PROD001");
+        Product testProduct2 = createTestProduct(testSupplier.getSupplierId(), "상품2", "PROD002");
+
         CreateInboundRequest request = new CreateInboundRequest(
-                1L,
-                1L,
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
                 LocalDate.of(2024, 1, 15),
                 List.of(
-                        new InboundProductRequest(1L, 10),
-                        new InboundProductRequest(2L, 20)
+                        new InboundProductRequest(testProduct1.getProductId(), 10),
+                        new InboundProductRequest(testProduct2.getProductId(), 20)
                 )
         );
-
-        Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
-                .name("테스트 창고")
-                .postcode("12345")
-                .baseAddress("서울시 어딘가")
-                .detailAddress("상세주소")
-                .managerName("관리자")
-                .managerContact("01012345678")
-                .build();
-
-        Supplier supplier = Supplier.builder()
-                .supplierId(1L)
-                .name("테스트 공급업체")
-                .businessRegistrationNumber("1234567890")
-                .postcode("12345")
-                .baseAddress("서울시 어딘가")
-                .detailAddress("상세주소")
-                .ceoName("대표")
-                .managerName("매니저")
-                .managerContact("01012345678")
-                .build();
-
-        Product product1 = Product.builder()
-                .productId(1L)
-                .supplierId(1L)
-                .productName("상품1")
-                .productCode("PROD001")
-                .unit("개")
-                .thumbnailUrl("https://example.com/1.jpg")
-                .active(true)
-                .build();
-
-        Product product2 = Product.builder()
-                .productId(2L)
-                .supplierId(1L)
-                .productName("상품2")
-                .productCode("PROD002")
-                .unit("박스")
-                .thumbnailUrl("https://example.com/2.jpg")
-                .active(true)
-                .build();
-
-        List<InboundProduct> inboundProducts = List.of(
-                new InboundProduct(1L, 10),
-                new InboundProduct(2L, 20)
-        );
-
-        Inbound inbound = Inbound.builder()
-                .inboundId(1L)
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.of(2024, 1, 15))
-                .products(inboundProducts)
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        when(warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
-        when(supplierRepository.findById(1L)).thenReturn(Optional.of(supplier));
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product1));
-        when(productRepository.findById(2L)).thenReturn(Optional.of(product2));
-        when(inboundRepository.save(any(Inbound.class))).thenReturn(inbound);
 
         // when
         Inbound result = inboundService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isEqualTo(1L);
-        assertThat(result.getWarehouseId()).isEqualTo(1L);
-        assertThat(result.getSupplierId()).isEqualTo(1L);
+        assertThat(result.getInboundId()).isNotNull();
+        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId());
+        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId());
         assertThat(result.getExpectedDate()).isEqualTo(LocalDate.of(2024, 1, 15));
         assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
         assertThat(result.getProducts()).hasSize(2);
-        assertThat(result.getProducts().get(0).productId()).isEqualTo(1L);
+        assertThat(result.getProducts().get(0).productId()).isEqualTo(testProduct1.getProductId());
         assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
-        assertThat(result.getProducts().get(1).productId()).isEqualTo(2L);
+        assertThat(result.getProducts().get(1).productId()).isEqualTo(testProduct2.getProductId());
         assertThat(result.getProducts().get(1).quantity()).isEqualTo(20);
 
-        verify(warehouseRepository).findById(1L);
-        verify(supplierRepository).findById(1L);
-        verify(productRepository).findById(1L);
-        verify(productRepository).findById(2L);
-        verify(inboundRepository).save(any(Inbound.class));
+        Inbound savedInbound = inboundRepository.findById(result.getInboundId()).orElse(null);
+        assertThat(savedInbound).isNotNull();
+        assertThat(savedInbound.getStatus()).isEqualTo(InboundStatus.REGISTERED);
     }
 
     @DisplayName("존재하지 않는 창고로 입고 생성 시 예외가 발생한다")
     @Test
     void saveWithWarehouseNotFound() {
         // given
-        CreateInboundRequest request = new CreateInboundRequest(
-                999L,
-                1L,
-                LocalDate.of(2024, 1, 15),
-                List.of(new InboundProductRequest(1L, 10))
-        );
+        Supplier testSupplier = createTestSupplier("테스트 공급업체", "1234567891");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "상품1", "PROD003");
 
-        when(warehouseRepository.findById(999L)).thenReturn(Optional.empty());
+        CreateInboundRequest request = new CreateInboundRequest(
+                999L, // 존재하지 않는 창고 ID
+                testSupplier.getSupplierId(),
+                LocalDate.of(2024, 1, 15),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 10))
+        );
 
         // when & then
         assertThatThrownBy(() -> inboundService.save(request))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(warehouseRepository).findById(999L);
     }
 
     @DisplayName("존재하지 않는 공급업체로 입고 생성 시 예외가 발생한다")
     @Test
     void saveWithSupplierNotFound() {
         // given
+        Warehouse testWarehouse = createTestWarehouse("테스트 창고2");
+        Supplier testSupplier = createTestSupplier("테스트 공급업체", "1234567891");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "상품1", "PROD004");
+
         CreateInboundRequest request = new CreateInboundRequest(
-                1L,
-                999L,
+                testWarehouse.getWarehouseId(),
+                999L, // 존재하지 않는 공급업체 ID
                 LocalDate.of(2024, 1, 15),
-                List.of(new InboundProductRequest(1L, 10))
+                List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-
-        Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
-                .name("테스트 창고")
-                .postcode("12345")
-                .baseAddress("서울시 어딘가")
-                .detailAddress("상세주소")
-                .managerName("관리자")
-                .managerContact("01012345678")
-                .build();
-
-        when(warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
-        when(supplierRepository.findById(999L)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> inboundService.save(request))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(warehouseRepository).findById(1L);
-        verify(supplierRepository).findById(999L);
     }
 
     @DisplayName("존재하지 않는 상품으로 입고 생성 시 예외가 발생한다")
     @Test
     void saveWithProductNotFound() {
         // given
+        Warehouse testWarehouse = createTestWarehouse("테스트 창고3");
+        Supplier testSupplier = createTestSupplier("테스트 공급업체", "1234567892");
+
         CreateInboundRequest request = new CreateInboundRequest(
-                1L,
-                1L,
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
                 LocalDate.of(2024, 1, 15),
-                List.of(new InboundProductRequest(999L, 10))
+                List.of(new InboundProductRequest(999L, 10)) // 존재하지 않는 상품 ID
         );
-
-        Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
-                .name("테스트 창고")
-                .postcode("12345")
-                .baseAddress("서울시 어딘가")
-                .detailAddress("상세주소")
-                .managerName("관리자")
-                .managerContact("01012345678")
-                .build();
-
-        Supplier supplier = Supplier.builder()
-                .supplierId(1L)
-                .name("테스트 공급업체")
-                .businessRegistrationNumber("1234567890")
-                .postcode("12345")
-                .baseAddress("서울시 어딘가")
-                .detailAddress("상세주소")
-                .ceoName("대표")
-                .managerName("매니저")
-                .managerContact("01012345678")
-                .build();
-
-        when(warehouseRepository.findById(1L)).thenReturn(Optional.of(warehouse));
-        when(supplierRepository.findById(1L)).thenReturn(Optional.of(supplier));
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> inboundService.save(request))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(warehouseRepository).findById(1L);
-        verify(supplierRepository).findById(1L);
-        verify(productRepository).findById(999L);
     }
 
     @DisplayName("입고 ID로 조회를 성공하면 해당 입고 정보를 반환한다")
     @Test
     void findByIdWithSuccess() {
         // given
-        Long inboundId = 1L;
-        List<InboundProduct> inboundProducts = List.of(
-                new InboundProduct(1L, 10)
+        Warehouse testWarehouse = createTestWarehouse("조회 테스트 창고");
+        Supplier testSupplier = createTestSupplier("조회 테스트 공급업체", "1234567893");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "조회 테스트 상품", "PROD005");
+
+        CreateInboundRequest request = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.of(2024, 1, 15),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-
-        Inbound inbound = Inbound.builder()
-                .inboundId(inboundId)
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.of(2024, 1, 15))
-                .products(inboundProducts)
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.of(inbound));
+        Inbound savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.getInboundId();
 
         // when
         Inbound result = inboundService.findById(inboundId);
@@ -278,8 +214,6 @@ class InboundServiceTest {
         assertThat(result.getProducts()).hasSize(1);
         assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
         assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
-
-        verify(inboundRepository).findById(inboundId);
     }
 
     @DisplayName("존재하지 않는 입고 ID로 조회 시 예외가 발생한다")
@@ -287,14 +221,11 @@ class InboundServiceTest {
     void findByIdWithNotFound() {
         // given
         Long inboundId = 999L;
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> inboundService.findById(inboundId))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(inboundRepository).findById(inboundId);
     }
 
     @DisplayName("null ID로 입고 조회 시 예외가 발생한다")
@@ -310,64 +241,57 @@ class InboundServiceTest {
     @Test
     void findAllWithSuccess() {
         // given
-        List<InboundProduct> products1 = List.of(
-                new InboundProduct(1L, 10)
-        );
-        List<InboundProduct> products2 = List.of(
-                new InboundProduct(2L, 20)
+        Warehouse testWarehouse1 = createTestWarehouse("전체 조회 창고1");
+        Warehouse testWarehouse2 = createTestWarehouse("전체 조회 창고2");
+        Supplier testSupplier1 = createTestSupplier("전체 조회 공급업체1", "1234567894");
+        Supplier testSupplier2 = createTestSupplier("전체 조회 공급업체2", "1234567895");
+        Product testProduct1 = createTestProduct(testSupplier1.getSupplierId(), "전체 조회 상품1", "PROD006");
+        Product testProduct2 = createTestProduct(testSupplier2.getSupplierId(), "전체 조회 상품2", "PROD007");
+
+        CreateInboundRequest request1 = new CreateInboundRequest(
+                testWarehouse1.getWarehouseId(),
+                testSupplier1.getSupplierId(),
+                LocalDate.of(2024, 1, 15),
+                List.of(new InboundProductRequest(testProduct1.getProductId(), 10))
         );
 
-        List<Inbound> inbounds = List.of(
-                Inbound.builder().inboundId(1L).warehouseId(1L).supplierId(1L)
-                        .expectedDate(LocalDate.of(2024, 1, 15)).products(products1).status(InboundStatus.REGISTERED).build(),
-                Inbound.builder().inboundId(2L).warehouseId(1L).supplierId(1L)
-                        .expectedDate(LocalDate.of(2024, 1, 16)).products(products2).status(InboundStatus.INSPECTING).build()
+        CreateInboundRequest request2 = new CreateInboundRequest(
+                testWarehouse2.getWarehouseId(),
+                testSupplier2.getSupplierId(),
+                LocalDate.of(2024, 1, 16),
+                List.of(new InboundProductRequest(testProduct2.getProductId(), 20))
         );
 
-        when(inboundRepository.findAll()).thenReturn(inbounds);
+        inboundService.save(request1);
+        inboundService.save(request2);
 
         // when
         List<Inbound> result = inboundService.findAll();
 
         // then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getInboundId()).isEqualTo(1L);
-        assertThat(result.get(1).getInboundId()).isEqualTo(2L);
-
-        verify(inboundRepository).findAll();
+        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
+        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
     }
 
     @DisplayName("입고 상태 수정을 성공하면 수정된 입고 정보를 반환한다")
     @Test
     void updateStatusWithSuccess() {
         // given
-        Long inboundId = 1L;
-        UpdateInboundStatusRequest updateRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        Warehouse testWarehouse = createTestWarehouse("상태 수정 테스트 창고");
+        Supplier testSupplier = createTestSupplier("상태 수정 테스트 공급업체", "1234567896");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "상태 수정 테스트 상품", "PROD008");
 
-        List<InboundProduct> inboundProducts = List.of(
-                new InboundProduct(1L, 10)
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.of(2024, 1, 15),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
+        Inbound savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.getInboundId();
 
-        Inbound existingInbound = Inbound.builder()
-                .inboundId(inboundId)
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.of(2024, 1, 15))
-                .products(inboundProducts)
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        Inbound updatedInbound = Inbound.builder()
-                .inboundId(inboundId)
-                .warehouseId(1L) // 업데이트되지 않음
-                .supplierId(1L) // 업데이트되지 않음
-                .expectedDate(LocalDate.of(2024, 1, 15)) // 업데이트되지 않음
-                .products(inboundProducts) // 업데이트되지 않음
-                .status(InboundStatus.INSPECTING)
-                .build();
-
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.of(existingInbound));
-        when(inboundRepository.save(any(Inbound.class))).thenReturn(updatedInbound);
+        UpdateInboundStatusRequest updateRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
 
         // when
         Inbound result = inboundService.updateStatus(inboundId, updateRequest);
@@ -376,13 +300,14 @@ class InboundServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getInboundId()).isEqualTo(inboundId);
         assertThat(result.getStatus()).isEqualTo(InboundStatus.INSPECTING);
-        assertThat(result.getWarehouseId()).isEqualTo(1L); // 업데이트되지 않음
-        assertThat(result.getSupplierId()).isEqualTo(1L); // 업데이트되지 않음
+        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId()); // 업데이트되지 않음
+        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
         assertThat(result.getProducts()).hasSize(1); // 업데이트되지 않음
         assertThat(result.getProducts().get(0).quantity()).isEqualTo(10); // 업데이트되지 않음
 
-        verify(inboundRepository).findById(inboundId);
-        verify(inboundRepository).save(any(Inbound.class));
+        Inbound updatedInbound = inboundRepository.findById(inboundId).orElse(null);
+        assertThat(updatedInbound).isNotNull();
+        assertThat(updatedInbound.getStatus()).isEqualTo(InboundStatus.INSPECTING);
     }
 
     @DisplayName("존재하지 않는 입고 상태 수정 시 예외가 발생한다")
@@ -392,14 +317,10 @@ class InboundServiceTest {
         Long inboundId = 999L;
         UpdateInboundStatusRequest updateRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
 
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.empty());
-
         // when & then
         assertThatThrownBy(() -> inboundService.updateStatus(inboundId, updateRequest))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(inboundRepository).findById(inboundId);
     }
 
     @DisplayName("null ID로 입고 상태 수정 시 예외가 발생한다")
@@ -418,28 +339,24 @@ class InboundServiceTest {
     @Test
     void deleteByIdWithSuccess() {
         // given
-        Long inboundId = 1L;
-        List<InboundProduct> inboundProducts = List.of(
-                new InboundProduct(1L, 10)
+        Warehouse testWarehouse = createTestWarehouse("삭제 테스트 창고");
+        Supplier testSupplier = createTestSupplier("삭제 테스트 공급업체", "1234567897");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "삭제 테스트 상품", "PROD009");
+
+        CreateInboundRequest request = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.of(2024, 1, 15),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-
-        Inbound inbound = Inbound.builder()
-                .inboundId(inboundId)
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.of(2024, 1, 15))
-                .products(inboundProducts)
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.of(inbound));
+        Inbound savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.getInboundId();
 
         // when
         inboundService.deleteById(inboundId);
 
         // then
-        verify(inboundRepository).findById(inboundId);
-        verify(inboundRepository).deleteById(inboundId);
+        assertThat(inboundRepository.findById(inboundId)).isEmpty();
     }
 
     @DisplayName("존재하지 않는 입고 삭제 시 예외가 발생한다")
@@ -447,14 +364,11 @@ class InboundServiceTest {
     void deleteByIdWithNotFound() {
         // given
         Long inboundId = 999L;
-        when(inboundRepository.findById(inboundId)).thenReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> inboundService.deleteById(inboundId))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.DATA_NOT_FOUND);
-
-        verify(inboundRepository).findById(inboundId);
     }
 
     @DisplayName("null ID로 입고 삭제 시 예외가 발생한다")

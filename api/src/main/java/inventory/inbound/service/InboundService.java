@@ -71,16 +71,15 @@ public class InboundService {
 
         Inbound existingInbound = findById(id);
 
-        Inbound updatedInbound = Inbound.builder()
-                .inboundId(id)
-                .warehouseId(existingInbound.getWarehouseId()) // 업데이트하지 않음
-                .supplierId(existingInbound.getSupplierId()) // 업데이트하지 않음
-                .expectedDate(existingInbound.getExpectedDate()) // 업데이트하지 않음
-                .products(existingInbound.getProducts()) // 업데이트하지 않음
+        Inbound updateData = Inbound.builder()
+                .warehouseId(existingInbound.getWarehouseId())
+                .supplierId(existingInbound.getSupplierId())
+                .expectedDate(existingInbound.getExpectedDate())
+                .products(existingInbound.getProducts())
                 .status(request.status())
                 .build();
 
-        return inboundRepository.save(updatedInbound);
+        return existingInbound.updateStatus(updateData);
     }
 
     public void deleteById(Long id) {

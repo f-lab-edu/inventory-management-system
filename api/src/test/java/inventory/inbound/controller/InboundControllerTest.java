@@ -1,15 +1,5 @@
 package inventory.inbound.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.inbound.controller.request.CreateInboundRequest;
@@ -19,8 +9,6 @@ import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.enums.InboundStatus;
 import inventory.inbound.service.InboundService;
-import java.time.LocalDate;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +18,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = InboundController.class)
 @Import(GlobalExceptionHandler.class)
@@ -57,7 +55,6 @@ class InboundControllerTest {
 
         InboundProduct product = new InboundProduct(1L, 100);
         Inbound savedInbound = Inbound.builder()
-                .inboundId(1L)
                 .warehouseId(1L)
                 .supplierId(1L)
                 .expectedDate(LocalDate.now().plusDays(7))
@@ -89,7 +86,6 @@ class InboundControllerTest {
         Long inboundId = 1L;
         InboundProduct product = new InboundProduct(1L, 100);
         Inbound inbound = Inbound.builder()
-                .inboundId(inboundId)
                 .warehouseId(1L)
                 .supplierId(1L)
                 .expectedDate(LocalDate.now().plusDays(7))
@@ -116,7 +112,6 @@ class InboundControllerTest {
         // given
         InboundProduct product = new InboundProduct(1L, 100);
         Inbound inbound = Inbound.builder()
-                .inboundId(1L)
                 .warehouseId(1L)
                 .supplierId(1L)
                 .expectedDate(LocalDate.now().plusDays(7))
@@ -146,7 +141,6 @@ class InboundControllerTest {
 
         InboundProduct product = new InboundProduct(1L, 100);
         Inbound updatedInbound = Inbound.builder()
-                .inboundId(inboundId)
                 .warehouseId(1L)
                 .supplierId(1L)
                 .expectedDate(LocalDate.now().plusDays(7))

@@ -6,9 +6,10 @@ import inventory.warehouse.controller.request.CreateWarehouseRequest;
 import inventory.warehouse.controller.request.UpdateWarehouseRequest;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -49,19 +50,16 @@ public class WarehouseService {
 
         Warehouse existingWarehouse = findById(id);
 
-        Warehouse updatedWarehouse = Warehouse.builder()
-                .warehouseId(id)
-                .name(request.name() != null ? request.name() : existingWarehouse.getName())
-                .postcode(request.postcode() != null ? request.postcode() : existingWarehouse.getPostcode())
-                .baseAddress(request.baseAddress() != null ? request.baseAddress() : existingWarehouse.getBaseAddress())
-                .detailAddress(request.detailAddress() != null ? request.detailAddress()
-                        : existingWarehouse.getDetailAddress())
-                .managerName(request.managerName() != null ? request.managerName() : existingWarehouse.getManagerName())
-                .managerContact(request.managerContact() != null ? request.managerContact()
-                        : existingWarehouse.getManagerContact())
+        Warehouse updateWarehouse = Warehouse.builder()
+                .name(request.name())
+                .postcode(request.postcode())
+                .baseAddress(request.baseAddress())
+                .detailAddress(request.detailAddress())
+                .managerName(request.managerName())
+                .managerContact(request.managerContact())
                 .build();
 
-        return warehouseRepository.save(updatedWarehouse);
+        return existingWarehouse.update(updateWarehouse);
     }
 
     public void deleteById(Long id) {

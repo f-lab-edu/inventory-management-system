@@ -7,9 +7,10 @@ import inventory.product.controller.request.UpdateProductRequest;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.supplier.repository.SupplierRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @Service
@@ -53,17 +54,15 @@ public class ProductService {
 
         Product existingProduct = findById(id);
 
-        Product updatedProduct = Product.builder()
-                .productId(id)
+        Product updateProduct = Product.builder()
                 .supplierId(existingProduct.getSupplierId())
                 .productCode(existingProduct.getProductCode())
                 .unit(existingProduct.getUnit())
                 .productName(request.productName() != null ? request.productName() : existingProduct.getProductName())
-                .thumbnailUrl(request.thumbnailUrl())
-                .active(request.active())
+                .thumbnailUrl(request.thumbnailUrl() != null ? request.thumbnailUrl() : existingProduct.getThumbnailUrl())
                 .build();
 
-        return productRepository.save(updatedProduct);
+        return existingProduct.update(updateProduct);
     }
 
     public void deleteById(Long id) {
