@@ -23,8 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 class SupplierServiceTest {
 
-    @Autowired
-    private SupplierRepository supplierRepository;
+//    @Autowired
+//    private SupplierRepository supplierRepository;
 
     @Autowired
     private SupplierService supplierService;

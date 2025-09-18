@@ -2,11 +2,11 @@ package inventory.supplier.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.supplier.domain.Supplier;
+import inventory.supplier.repository.SupplierRepository;
 import inventory.supplier.service.request.CreateSupplierRequest;
 import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
-import inventory.supplier.domain.Supplier;
-import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -64,8 +64,8 @@ public class SupplierService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        findById(id);
-        supplierRepository.deleteById(id);
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        supplier.softDelete();
     }
 }

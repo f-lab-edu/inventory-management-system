@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -38,6 +39,14 @@ public class Supplier {
 
     private boolean active = true;
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime modifiedAt;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
     @Builder
     public Supplier(String name, String businessRegistrationNumber, String postcode,
                     String baseAddress, String detailAddress, String ceoName, String managerName,
@@ -50,6 +59,8 @@ public class Supplier {
         this.ceoName = ceoName;
         this.managerName = managerName;
         this.managerContact = managerContact;
+        this.createdAt = LocalDateTime.now();
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public Supplier update(String postcode, String baseAddress, String detailAddress, String ceoName, String managerName, String managerContact) {
@@ -59,7 +70,13 @@ public class Supplier {
         this.ceoName = ceoName;
         this.managerName = managerName;
         this.managerContact = managerContact;
+        this.modifiedAt = LocalDateTime.now();
         return this;
+    }
+
+    public void softDelete() {
+        deleted = true;
+        deletedAt = LocalDateTime.now();
     }
 
     @Override
