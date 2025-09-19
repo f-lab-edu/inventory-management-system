@@ -8,6 +8,7 @@ import inventory.outbound.domain.enums.OutboundStatus;
 import inventory.outbound.repository.OutboundProductRepository;
 import inventory.outbound.repository.OutboundRepository;
 import inventory.outbound.service.request.CreateOutboundRequest;
+import inventory.outbound.service.request.OutboundProductRequest;
 import inventory.outbound.service.response.CreateOutboundResponse;
 import inventory.outbound.service.response.OutboundProductResponse;
 import inventory.product.domain.Product;
@@ -21,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
@@ -45,7 +48,6 @@ public class OutboundService {
         // 출고 등록
         Outbound outbound = Outbound.builder()
                 .warehouseId(warehouse.getWarehouseId())
-                .orderNumber("order-number")
                 .recipientName(request.recipientName())
                 .recipientContact(request.recipientContact())
                 .deliveryPostcode(request.deliveryPostcode())
@@ -58,50 +60,53 @@ public class OutboundService {
 
         Outbound savedOutbound = outboundRepository.save(outbound);
 
-        // 출고 상품 등록 및 재고 차감
-        List<OutboundProductResponse> outboundProductResponses = new ArrayList<>();
+        List<Long> productIds = new ArrayList<>();
+        for (OutboundProductRequest pr : request.products()) {
+            productIds.add(pr.productId());
+        }
+        Map<Long, Product> productMap = new HashMap<>();
+        for (Product product : productRepository.findByIds(productIds)) {
+            productMap.put(product.getProductId(), product);
+        }
 
-        for (inventory.outbound.service.request.OutboundProductRequest productRequest : request.products()) {
-            // 상품 존재 여부 확인
-            Product product = productRepository.findById(productRequest.productId())
-                    .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND,
-                            "상품을 찾을 수 없습니다. 상품 ID: " + productRequest.productId()));
+        Map<Long, WarehouseStock> stockMap = new HashMap<>();
+        for (WarehouseStock warehouseStock : warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouse.getWarehouseId(), productIds)) {
+            stockMap.put(warehouseStock.getProductId(), warehouseStock);
+        }
 
-            // 출고 상품 등록
-            OutboundProduct outboundProduct = OutboundProduct.builder()
+        List<OutboundProduct> outboundProducts = new ArrayList<>();
+        for (OutboundProductRequest productRequest : request.products()) {
+            outboundProducts.add(OutboundProduct.builder()
                     .outboundId(savedOutbound.getOutboundId())
                     .productId(productRequest.productId())
                     .requestedQuantity(productRequest.quantity())
-                    .build();
+                    .build());
+        }
 
-            OutboundProduct savedOutboundProduct = outboundProductRepository.save(outboundProduct);
+        List<OutboundProduct> savedOutboundProducts = outboundProductRepository.saveAll(outboundProducts);
 
-            // 재고 조회 (차감 전)
-            WarehouseStock warehouseStock = warehouseStockRepository
-                    .findByWarehouseIdAndProductId(warehouse.getWarehouseId(), productRequest.productId())
-                    .orElseThrow(() -> new CustomException(ExceptionCode.STOCK_NOT_FOUND,
-                            "창고에 해당 상품의 재고가 없습니다. 상품: " + product.getProductName()));
+        for (OutboundProductRequest productRequest : request.products()) {
+            WarehouseStock stock = stockMap.get(productRequest.productId());
+            stock.reserve(productRequest.quantity());
+        }
+        warehouseStockRepository.saveAll(new ArrayList<>(stockMap.values()));
 
-            // 응답용 OutboundProductResponse 생성 (재고 차감 전 상태로)
-            OutboundProductResponse productResponse = OutboundProductResponse.from(
-                    savedOutboundProduct,
-                    product,
-                    warehouseStock
-            );
-            outboundProductResponses.add(productResponse);
+        List<OutboundProductResponse> outboundProductResponses = new ArrayList<>();
+        for (OutboundProduct savedOutboundProduct : savedOutboundProducts) {
+            Product product = productMap.get(savedOutboundProduct.getProductId());
+            WarehouseStock warehouseStock = stockMap.get(savedOutboundProduct.getProductId());
+            outboundProductResponses.add(OutboundProductResponse.from(savedOutboundProduct, product, warehouseStock));
         }
 
         return CreateOutboundResponse.from(savedOutbound, warehouse, outboundProductResponses);
     }
 
-    private void validateStockAvailability(Long warehouseId, java.util.List<inventory.outbound.service.request.OutboundProductRequest> products) {
-        for (inventory.outbound.service.request.OutboundProductRequest productRequest : products) {
-            // 상품 존재 여부 확인
+    private void validateStockAvailability(Long warehouseId, java.util.List<OutboundProductRequest> products) {
+        for (OutboundProductRequest productRequest : products) {
             Product product = productRepository.findById(productRequest.productId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND,
                             "상품을 찾을 수 없습니다. 상품 ID: " + productRequest.productId()));
 
-            // 재고 존재 여부 및 수량 확인
             WarehouseStock warehouseStock = warehouseStockRepository
                     .findByWarehouseIdAndProductId(warehouseId, productRequest.productId())
                     .orElseThrow(() -> new CustomException(ExceptionCode.STOCK_NOT_FOUND,

@@ -73,7 +73,7 @@ public class WarehouseStock {
     }
 
     public boolean hasEnoughStock(int requestedQuantity) {
-        return this.quantity >= requestedQuantity;
+        return getAvailableQuantity() >= requestedQuantity;
     }
 
     public int getAvailableQuantity() {

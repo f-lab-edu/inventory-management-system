@@ -1,10 +1,7 @@
 package inventory.outbound.domain;
 
 import inventory.outbound.domain.enums.OutboundStatus;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,7 +10,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
+import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
@@ -48,6 +47,7 @@ public class Outbound {
 
     private String deliveryMemo;
 
+    @Enumerated(EnumType.STRING)
     private OutboundStatus outboundStatus;
 
     private LocalDateTime createdAt;
@@ -61,7 +61,7 @@ public class Outbound {
             LocalDate requestedDate, String deliveryMemo, OutboundStatus outboundStatus
     ) {
         this.warehouseId = warehouseId;
-        this.orderNumber = orderNumber;
+        this.orderNumber = orderNumber != null ? orderNumber : generateOrderNumber();
         this.recipientName = recipientName;
         this.recipientContact = recipientContact;
         this.deliveryPostcode = deliveryPostcode;
@@ -71,9 +71,20 @@ public class Outbound {
         this.expectedDate = calculateExpectedDate();
         this.shippedDate = null;
         this.deliveryMemo = deliveryMemo;
-        this.outboundStatus = outboundStatus;
+        this.outboundStatus = outboundStatus != null ? outboundStatus : OutboundStatus.ORDERED;
         this.createdAt = LocalDateTime.now();
         this.modifiedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 주문번호 생성 규칙
+     * - 형식: OByyyyMMdd-XXXXXXXX (날짜 + 8자리 대문자/숫자)
+     * - 충돌 방지는 애플리케이션/DB 레벨 제약으로 처리하고, 엔티티는 규칙만 책임짐
+     */
+    public static String generateOrderNumber() {
+        String datePart = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "OB" + datePart + "-" + randomPart;
     }
 
     /**
