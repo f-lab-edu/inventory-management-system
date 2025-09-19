@@ -6,12 +6,14 @@ import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundProductRepository;
+import inventory.inbound.repository.InboundQueryRepository.InboundSearchCondition;
 import inventory.inbound.repository.InboundRepository;
 import inventory.inbound.service.request.CreateInboundRequest;
 import inventory.inbound.service.request.InboundProductRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
 import inventory.inbound.service.response.InboundProductResponse;
 import inventory.inbound.service.response.InboundResponse;
+import inventory.inbound.service.response.InboundSummaryResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
@@ -20,9 +22,12 @@ import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.service.WarehouseStockService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +39,7 @@ public class InboundService {
 
     private final InboundRepository inboundRepository;
     private final InboundProductRepository inboundProductRepository;
+    //    private final InboundQueryRepository inboundQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
@@ -66,6 +72,22 @@ public class InboundService {
     }
 
     @Transactional(readOnly = true)
+    public Page<InboundSummaryResponse> findAllWithConditions(
+            Long warehouseId,
+            Long supplierId,
+            InboundStatus status,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable
+    ) {
+        InboundSearchCondition condition = new InboundSearchCondition(warehouseId, supplierId, status, startDate, endDate);
+
+        return inboundRepository.findInboundSummaries(
+                condition, pageable
+        );
+    }
+
+    @Transactional(readOnly = true)
     public List<Inbound> findAll() {
         return inboundRepository.findAll();
     }
@@ -88,6 +110,30 @@ public class InboundService {
         Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
 
         return createInboundResponse(updatedInbound, warehouse, supplier);
+    }
+
+    public void cancelInbound(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.CANCELED);
+        inbound.updateStatus(InboundStatus.CANCELED);
+    }
+
+    public void completeInbound(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.COMPLETED);
+        Inbound updatedInbound = inbound.updateStatus(InboundStatus.COMPLETED);
+
+        updateWarehouseStockOnInboundCompletion(updatedInbound);
     }
 
     public void deleteById(Long id) {
@@ -171,6 +217,12 @@ public class InboundService {
         List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
 
         return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
+    }
+
+    private InboundResponse createInboundResponseFromInbound(Inbound inbound) {
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
+        return createInboundResponse(inbound, warehouse, supplier);
     }
 
     private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {

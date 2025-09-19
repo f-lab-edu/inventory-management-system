@@ -6,6 +6,7 @@ import inventory.inbound.service.request.CreateInboundRequest;
 import inventory.inbound.service.request.InboundProductRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
 import inventory.inbound.service.response.InboundResponse;
+import inventory.inbound.service.response.InboundSummaryResponse;
 import inventory.inbound.service.response.InboundProductResponse;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.enums.InboundStatus;
@@ -16,11 +17,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -55,10 +60,12 @@ class InboundControllerTest {
         );
 
         InboundResponse savedInboundResponse = new InboundResponse(
-                1L, 1L, "창고명", 1L, "공급업체명", 
-                LocalDate.now().plusDays(7), 
-                List.of(new InboundProductResponse(1L, "상품명", 100)),
-                InboundStatus.REGISTERED
+                1L, 1L, "창고명", 1L, "공급업체명",
+                LocalDate.now().plusDays(7),
+                List.of(new InboundProductResponse(1L, "상품명", "P001", "개", 100)),
+                InboundStatus.REGISTERED,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(inboundService.save(any(CreateInboundRequest.class))).thenReturn(savedInboundResponse);
@@ -69,7 +76,7 @@ class InboundControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
-                .andExpect(jsonPath("$.data.id").value(1L))
+                .andExpect(jsonPath("$.data.inboundId").value(1L))
                 .andExpect(jsonPath("$.data.warehouseId").value(1L))
                 .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.products.length()").value(1))
@@ -84,10 +91,12 @@ class InboundControllerTest {
         // given
         Long inboundId = 1L;
         InboundResponse inboundResponse = new InboundResponse(
-                inboundId, 1L, "창고명", 1L, "공급업체명", 
-                LocalDate.now().plusDays(7), 
-                List.of(new InboundProductResponse(1L, "상품명", 100)),
-                InboundStatus.REGISTERED
+                inboundId, 1L, "창고명", 1L, "공급업체명",
+                LocalDate.now().plusDays(7),
+                List.of(new InboundProductResponse(1L, "상품명", "P001", "개", 100)),
+                InboundStatus.REGISTERED,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(inboundService.findById(inboundId)).thenReturn(inboundResponse);
@@ -95,7 +104,7 @@ class InboundControllerTest {
         // when & then
         mockMvc.perform(get(BASE_URL + "/" + inboundId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(inboundId))
+                .andExpect(jsonPath("$.data.inboundId").value(inboundId))
                 .andExpect(jsonPath("$.data.warehouseId").value(1L))
                 .andExpect(jsonPath("$.data.supplierId").value(1L))
                 .andExpect(jsonPath("$.data.products.length()").value(1))
@@ -103,29 +112,34 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.data.products[0].quantity").value(100));
     }
 
-    @DisplayName("입고 목록 조회를 성공하면 페이징된 결과를 반환한다")
+    @DisplayName("입고 목록 조회를 성공하면 페이징된 결과를 반환한다 (QueryDSL)")
     @Test
     void searchInboundsWithSuccess() throws Exception {
         // given
-        Inbound inbound = Inbound.builder()
-                .warehouseId(1L)
-                .supplierId(1L)
-                .expectedDate(LocalDate.now().plusDays(7))
-                .status(InboundStatus.REGISTERED)
-                .build();
+        InboundSummaryResponse summary = new InboundSummaryResponse(
+                1L, 1L, "창고명", 1L, "공급업체명",
+                LocalDate.now().plusDays(7), InboundStatus.REGISTERED,
+                java.time.LocalDateTime.now(), java.time.LocalDateTime.now()
+        );
+        Page<InboundSummaryResponse> page = new PageImpl<>(List.of(summary), Pageable.ofSize(10), 1);
 
-        // findAll() 메서드는 현재 Inbound 리스트를 반환하므로 그대로 사용
-        when(inboundService.findAll()).thenReturn(List.of(inbound));
+        when(inboundService.findAllWithConditions(
+                any(), any(), any(), any(), any(), any(Pageable.class)
+        )).thenReturn(page);
 
         // when & then
         mockMvc.perform(get(BASE_URL)
-                        .param("currentPageNumber", "0")
-                        .param("pageSize", "10"))
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "createdAt")
+                        .param("sortDir", "desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.currentPageNumber").value(0))
                 .andExpect(jsonPath("$.data.pageSize").value(10))
-                .andExpect(jsonPath("$.data.totalElements").value(1));
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].warehouseName").value("창고명"))
+                .andExpect(jsonPath("$.data.content[0].supplierName").value("공급업체명"));
     }
 
     @DisplayName("입고 상태 업데이트를 성공하면 OK 상태와 업데이트된 입고 정보를 반환한다")
@@ -136,10 +150,12 @@ class InboundControllerTest {
         UpdateInboundStatusRequest request = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
         
         InboundResponse updatedResponse = new InboundResponse(
-                inboundId, 1L, "창고명", 1L, "공급업체명", 
-                LocalDate.now().plusDays(7), 
-                List.of(new InboundProductResponse(1L, "상품명", 100)),
-                InboundStatus.INSPECTING
+                inboundId, 1L, "창고명", 1L, "공급업체명",
+                LocalDate.now().plusDays(7),
+                List.of(new InboundProductResponse(1L, "상품명", "P001", "개", 100)),
+                InboundStatus.INSPECTING,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(inboundService.updateStatus(eq(inboundId), any(UpdateInboundStatusRequest.class)))
@@ -150,7 +166,7 @@ class InboundControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(inboundId))
+                .andExpect(jsonPath("$.data.inboundId").value(inboundId))
                 .andExpect(jsonPath("$.data.status").value(InboundStatus.INSPECTING.name()));
     }
 

@@ -2,11 +2,11 @@ package inventory.warehouse.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
-import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.repository.WarehouseRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -262,7 +262,10 @@ class WarehouseServiceTest {
         warehouseService.deleteById(savedWarehouse.id());
 
         // then
-        assertThat(warehouseRepository.findById(savedWarehouse.id())).isEmpty();
+        Warehouse warehouse = warehouseRepository.findById(savedWarehouse.id())
+                .orElse(null);
+        assertThat(warehouse).isNotNull();
+        assertThat(warehouse.isDeleted()).isTrue();
     }
 
     @DisplayName("존재하지 않는 창고 삭제 시 예외가 발생한다")

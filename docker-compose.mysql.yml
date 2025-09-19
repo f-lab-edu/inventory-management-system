@@ -37,3 +37,7 @@ services:
 volumes:
   inveni-mysql-data:
     driver: local
+
+networks:
+  inventory-network:
+    driver: bridge

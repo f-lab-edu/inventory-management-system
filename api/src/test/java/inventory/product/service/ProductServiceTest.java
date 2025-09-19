@@ -314,7 +314,9 @@ class ProductServiceTest {
         productService.deleteById(productId);
 
         // then
-        assertThat(productRepository.findById(productId)).isEmpty();
+        Product product = productRepository.findById(productId).orElse(null);
+        assertThat(product).isNotNull();
+        assertThat(product.isDeleted()).isTrue();
     }
 
     @DisplayName("존재하지 않는 상품 삭제 시 예외가 발생한다")
