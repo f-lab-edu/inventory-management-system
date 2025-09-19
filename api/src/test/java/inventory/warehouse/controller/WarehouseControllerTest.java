@@ -2,16 +2,19 @@ package inventory.warehouse.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.service.WarehouseService;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
-import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.service.WarehouseService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -117,12 +120,19 @@ class WarehouseControllerTest {
                 .managerContact("01011112222")
                 .build();
 
-        when(warehouseService.findAll()).thenReturn(java.util.List.of(warehouse));
+        Page<WarehouseResponse> page = new PageImpl<>(
+                java.util.List.of(WarehouseResponse.from(warehouse)), Pageable.ofSize(10), 1
+        );
+        when(warehouseService.findAllWithConditions(
+                any(), any(), any(), any(Pageable.class)
+        )).thenReturn(page);
 
         // when & then
         mockMvc.perform(get(BASE_URL)
-                        .param("currentPageNumber", "0")
-                        .param("pageSize", "10"))
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "createdAt")
+                        .param("sortDir", "desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.currentPageNumber").value(0))

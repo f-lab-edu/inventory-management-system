@@ -16,13 +16,13 @@ public class InboundProduct {
 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
-    Long inboundProductId;
+    private Long inboundProductId;
 
-    Long productId;
+    private Long productId;
 
-    Long inboundId;
+    private Long inboundId;
 
-    int quantity;
+    private int quantity;
 
     @Builder
     public InboundProduct(Long productId, Long inboundId, int quantity) {

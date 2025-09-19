@@ -5,8 +5,13 @@ import inventory.common.exception.ExceptionCode;
 import inventory.product.repository.ProductRepository;
 import inventory.warehouse.domain.WarehouseStock;
 import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.repository.WarehouseStockQueryRepository;
 import inventory.warehouse.repository.WarehouseStockRepository;
+import inventory.warehouse.service.query.WarehouseStockSearchCondition;
+import inventory.warehouse.service.response.WarehouseStockResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class WarehouseStockService {
 
     private final WarehouseStockRepository warehouseStockRepository;
+    private final WarehouseStockQueryRepository warehouseStockQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final ProductRepository productRepository;
 
@@ -50,6 +56,21 @@ public class WarehouseStockService {
                     .build();
             warehouseStockRepository.save(newStock);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WarehouseStockResponse> findAllWithConditions(
+            Long warehouseId,
+            Long productId,
+            String productNameContains,
+            String productCodeContains,
+            Boolean belowSafetyOnly,
+            Pageable pageable
+    ) {
+        WarehouseStockSearchCondition condition = new WarehouseStockSearchCondition(
+                warehouseId, productId, productNameContains, productCodeContains, belowSafetyOnly
+        );
+        return warehouseStockQueryRepository.findWarehouseStockSummaries(condition, pageable);
     }
 
 }

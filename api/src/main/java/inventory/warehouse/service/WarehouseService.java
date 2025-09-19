@@ -2,17 +2,20 @@ package inventory.warehouse.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.warehouse.domain.Warehouse;
+import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.service.query.WarehouseSearchCondition;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
-import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class WarehouseService {
 
@@ -40,8 +43,16 @@ public class WarehouseService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
     }
 
-    public List<Warehouse> findAll() {
-        return warehouseRepository.findAll();
+    public Page<WarehouseResponse> findAllWithConditions(
+            String nameContains,
+            String postcodeContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        WarehouseSearchCondition condition = new WarehouseSearchCondition(
+                nameContains, postcodeContains, active
+        );
+        return warehouseRepository.findWarehouseSummaries(condition, pageable);
     }
 
     public WarehouseResponse update(Long id, UpdateWarehouseRequest request) {
@@ -62,8 +73,8 @@ public class WarehouseService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        findById(id);
-        warehouseRepository.deleteById(id);
+        Warehouse warehouse = warehouseRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        warehouse.softDelete();
     }
 }

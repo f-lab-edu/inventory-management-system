@@ -35,7 +35,11 @@ public enum ExceptionCode {
     // 입고 관련
     INVALID_STATUS_TRANSITION(HttpStatus.BAD_REQUEST, "잘못된 상태 전환입니다"),
     INBOUND_COMPLETED(HttpStatus.BAD_REQUEST, "입고 완료된 건은 수정할 수 없습니다"),
-    INBOUND_NOT_DELETABLE(HttpStatus.BAD_REQUEST, "입고 완료된 건은 삭제할 수 없습니다");
+    INBOUND_NOT_DELETABLE(HttpStatus.BAD_REQUEST, "입고 완료된 건은 삭제할 수 없습니다"),
+    
+    // 출고 관련
+    INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "재고가 부족합니다"),
+    STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "창고에 해당 상품의 재고가 없습니다");
 
     private final HttpStatus httpStatus;
     private final String message;

@@ -8,10 +8,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
 public class Product {
@@ -32,27 +35,39 @@ public class Product {
 
     private String thumbnailUrl;
 
-    private boolean active = true;
+    private boolean active;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime modifiedAt;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     @Builder
     public Product(Long supplierId, String productName, String productCode, String unit,
-                   String thumbnailUrl, boolean active) {
+                   String thumbnailUrl, Boolean active) {
         this.supplierId = supplierId;
         this.productName = productName;
         this.productCode = productCode;
         this.unit = unit;
         this.thumbnailUrl = thumbnailUrl != null ? thumbnailUrl : THUMBNAIL_DEFAULT_PNG;
-        this.active = active;
-    }
-
-    public void deactivate() {
-        this.active = false;
+        this.active = active != null ? active : true;
+        this.createdAt = LocalDateTime.now();
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public Product update(String productName, String thumbnailUrl) {
         this.productName = productName;
         this.thumbnailUrl = thumbnailUrl;
+        this.modifiedAt = LocalDateTime.now();
         return this;
+    }
+
+    public void softDelete() {
+        deleted = true;
+        deletedAt = LocalDateTime.now();
     }
 
     @Override

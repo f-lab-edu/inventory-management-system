@@ -16,7 +16,7 @@ public record WarehouseStockResponse(
         int quantity,
         int safetyStock,
         boolean isBelowSafetyStock,
-        LocalDateTime lastUpdatedAt
+        LocalDateTime modifiedAt
 ) {
     public static WarehouseStockResponse from(WarehouseStock warehouseStock, Warehouse warehouse, Product product) {
         return new WarehouseStockResponse(

@@ -2,17 +2,19 @@ package inventory.supplier.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
+import inventory.supplier.service.SupplierService;
 import inventory.supplier.service.request.CreateSupplierRequest;
 import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
-import inventory.supplier.service.SupplierService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/suppliers")
@@ -38,17 +40,23 @@ public class SupplierController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<SupplierResponse>>> searchSupplier(
-            @RequestParam(defaultValue = "0") int currentPageNumber,
-            @RequestParam(defaultValue = "30") int pageSize) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "30") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String brn,
+            @RequestParam(required = false) Boolean active) {
 
-        List<SupplierResponse> suppliers = supplierService.findAll();
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-        int startIndex = currentPageNumber * pageSize;
-        int endIndex = Math.min(startIndex + pageSize, suppliers.size());
-        List<SupplierResponse> pagedSuppliers = suppliers.subList(startIndex, endIndex);
+        Page<SupplierResponse> pageResult = supplierService.findAllWithConditions(
+                name, brn, active, pageable
+        );
 
         PageResponse<SupplierResponse> pageResponse =
-                PageResponse.of(pagedSuppliers, currentPageNumber, pageSize, suppliers.size());
+                PageResponse.of(pageResult.getContent(), page, size, pageResult.getTotalElements());
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }

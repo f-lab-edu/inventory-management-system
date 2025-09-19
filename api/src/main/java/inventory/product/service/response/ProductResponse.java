@@ -46,8 +46,8 @@ public record ProductResponse(
                 product.getThumbnailUrl(),
                 product.getUnit(),
                 product.isActive(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                product.getCreatedAt(),
+                product.getModifiedAt()
         );
     }
 
@@ -61,8 +61,8 @@ public record ProductResponse(
                 product.getThumbnailUrl(),
                 product.getUnit(),
                 product.isActive(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                product.getCreatedAt(),
+                product.getModifiedAt()
         );
     }
 }

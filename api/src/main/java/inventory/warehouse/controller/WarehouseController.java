@@ -2,18 +2,19 @@ package inventory.warehouse.controller;
 
 import inventory.common.dto.response.ApiResponse;
 import inventory.common.dto.response.PageResponse;
+import inventory.warehouse.service.WarehouseService;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
-import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.service.WarehouseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/warehouses")
@@ -40,21 +41,24 @@ public class WarehouseController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<WarehouseResponse>>> searchWarehouse(
-            @RequestParam(defaultValue = "0") int currentPageNumber,
-            @RequestParam(defaultValue = "10") int pageSize) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String postcode,
+            @RequestParam(required = false) Boolean active) {
 
-        List<Warehouse> warehouses = warehouseService.findAll();
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-        int startIndex = currentPageNumber * pageSize;
-        int endIndex = Math.min(startIndex + pageSize, warehouses.size());
-        List<Warehouse> pagedWarehouses = warehouses.subList(startIndex, endIndex);
-
-        List<WarehouseResponse> responses = pagedWarehouses.stream()
-                .map(WarehouseResponse::from)
-                .toList();
+        Page<WarehouseResponse> pageResult = warehouseService.findAllWithConditions(
+                name, postcode, active, pageable
+        );
 
         PageResponse<WarehouseResponse> pageResponse = PageResponse.of(
-                responses, currentPageNumber, pageSize, warehouses.size());
+                pageResult.getContent(), page, size, pageResult.getTotalElements()
+        );
 
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }

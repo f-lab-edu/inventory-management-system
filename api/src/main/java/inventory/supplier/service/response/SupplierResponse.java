@@ -52,8 +52,8 @@ public record SupplierResponse(
                 supplier.getManagerName(),
                 supplier.getManagerContact(),
                 supplier.isActive(),
-                LocalDateTime.now(),
-                LocalDateTime.now()
+                supplier.getCreatedAt(),
+                supplier.getModifiedAt()
         );
     }
 }

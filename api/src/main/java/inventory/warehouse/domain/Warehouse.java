@@ -8,10 +8,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
 public class Warehouse {
@@ -34,6 +37,14 @@ public class Warehouse {
 
     private boolean active = true;
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime modifiedAt;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
     @Builder
     public Warehouse(String name, String postcode, String baseAddress, String detailAddress,
                      String managerName,
@@ -44,10 +55,8 @@ public class Warehouse {
         this.detailAddress = detailAddress;
         this.managerName = managerName;
         this.managerContact = managerContact;
-    }
-
-    public void deactivate() {
-        this.active = false;
+        this.createdAt = LocalDateTime.now();
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public Warehouse update(String name, String postcode, String baseAddress, String detailAddress, String managerName, String managerContact) {
@@ -57,7 +66,13 @@ public class Warehouse {
         this.detailAddress = detailAddress;
         this.managerName = managerName;
         this.managerContact = managerContact;
+        this.modifiedAt = LocalDateTime.now();
         return this;
+    }
+
+    public void softDelete() {
+        deleted = true;
+        deletedAt = LocalDateTime.now();
     }
 
     @Override
