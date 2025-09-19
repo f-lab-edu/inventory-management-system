@@ -17,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -164,7 +166,7 @@ class ProductServiceTest {
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
     }
 
-    @DisplayName("전체 상품 조회를 성공하면 상품 목록을 반환한다")
+    @DisplayName("QueryDSL 조건 기반 상품 목록 조회를 성공하면 페이징 결과를 반환한다")
     @Test
     void findAllWithSuccess() {
         // given
@@ -191,12 +193,14 @@ class ProductServiceTest {
         productService.save(request2);
 
         // when
-        List<Product> result = productService.findAll();
+        Page<ProductResponse> page = productService.findAllWithConditions(
+                null, null, null, null, PageRequest.of(0, 10)
+        );
 
         // then
-        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(p -> p.getProductName().equals("상품1"))).isTrue();
-        assertThat(result.stream().anyMatch(p -> p.getProductName().equals("상품2"))).isTrue();
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent().stream().anyMatch(p -> p.productName().equals("상품1"))).isTrue();
+        assertThat(page.getContent().stream().anyMatch(p -> p.productName().equals("상품2"))).isTrue();
     }
 
     @DisplayName("상품 정보 수정을 성공하면 수정된 상품 정보를 반환한다")

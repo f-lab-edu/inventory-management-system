@@ -4,16 +4,17 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
+import inventory.product.service.query.ProductSearchCondition;
 import inventory.product.service.request.CreateProductRequest;
 import inventory.product.service.request.UpdateProductRequest;
 import inventory.product.service.response.ProductResponse;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @Transactional
@@ -52,8 +53,17 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<Product> findAll() {
-        return productRepository.findAll();
+    public Page<ProductResponse> findAllWithConditions(
+            Long supplierId,
+            String productNameContains,
+            String productCodeContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        ProductSearchCondition condition = new ProductSearchCondition(
+                supplierId, productNameContains, productCodeContains, active
+        );
+        return productRepository.findProductSummaries(condition, pageable);
     }
 
     public ProductResponse update(Long id, UpdateProductRequest request) {

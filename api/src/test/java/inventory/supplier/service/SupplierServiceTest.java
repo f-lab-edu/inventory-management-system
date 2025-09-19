@@ -5,15 +5,14 @@ import inventory.common.exception.ExceptionCode;
 import inventory.supplier.service.request.CreateSupplierRequest;
 import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
-import inventory.supplier.repository.SupplierRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,9 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 @SpringBootTest
 class SupplierServiceTest {
-
-//    @Autowired
-//    private SupplierRepository supplierRepository;
 
     @Autowired
     private SupplierService supplierService;
@@ -179,7 +175,7 @@ class SupplierServiceTest {
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
     }
 
-    @DisplayName("모든 공급업체 조회를 성공하면 공급업체 목록을 반환한다")
+    @DisplayName("공급업체 목록 조회를 성공하면 페이징 결과를 반환한다")
     @Test
     void findAllWithSuccess() {
         // given
@@ -209,12 +205,14 @@ class SupplierServiceTest {
         supplierService.save(request2);
 
         // when
-        List<SupplierResponse> result = supplierService.findAll();
+        Page<SupplierResponse> page = supplierService.findAllWithConditions(
+                null, null, null, PageRequest.of(0, 10)
+        );
 
         // then
-        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(s -> s.name().equals("공급업체1"))).isTrue();
-        assertThat(result.stream().anyMatch(s -> s.name().equals("공급업체2"))).isTrue();
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent().stream().anyMatch(s -> s.name().equals("공급업체1"))).isTrue();
+        assertThat(page.getContent().stream().anyMatch(s -> s.name().equals("공급업체2"))).isTrue();
     }
 
     @DisplayName("공급업체 정보 수정을 성공하면 수정된 공급업체 정보를 반환한다")

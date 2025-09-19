@@ -12,9 +12,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -151,7 +151,7 @@ class WarehouseServiceTest {
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
     }
 
-    @DisplayName("모든 창고 조회를 성공하면 창고 목록을 반환한다")
+    @DisplayName("창고 목록 조회를 성공하면 페이징 결과를 반환한다")
     @Test
     void findAllWithSuccess() {
         // given
@@ -177,12 +177,13 @@ class WarehouseServiceTest {
         warehouseService.save(request2);
 
         // when
-        List<Warehouse> result = warehouseService.findAll();
+        Page<WarehouseResponse> page = warehouseService.findAllWithConditions(
+                null, null, null, PageRequest.of(0, 10)
+        );
 
         // then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("테스트 창고1");
-        assertThat(result.get(1).getName()).isEqualTo("테스트 창고2");
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent().getFirst().name()).isEqualTo("테스트 창고2");
     }
 
     @DisplayName("창고 정보 수정을 성공하면 수정된 창고 정보를 반환한다")

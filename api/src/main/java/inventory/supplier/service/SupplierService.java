@@ -4,14 +4,15 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
+import inventory.supplier.service.query.SupplierSearchCondition;
 import inventory.supplier.service.request.CreateSupplierRequest;
 import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @Transactional
@@ -46,11 +47,16 @@ public class SupplierService {
     }
 
     @Transactional(readOnly = true)
-    public List<SupplierResponse> findAll() {
-        return supplierRepository.findAll()
-                .stream()
-                .map(SupplierResponse::from)
-                .toList();
+    public Page<SupplierResponse> findAllWithConditions(
+            String nameContains,
+            String brnContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        SupplierSearchCondition condition = new SupplierSearchCondition(
+                nameContains, brnContains, active
+        );
+        return supplierRepository.findSupplierSummaries(condition, pageable);
     }
 
     public SupplierResponse update(Long id, UpdateSupplierRequest request) {

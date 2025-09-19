@@ -4,14 +4,15 @@ import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.service.query.WarehouseSearchCondition;
 import inventory.warehouse.service.request.CreateWarehouseRequest;
 import inventory.warehouse.service.request.UpdateWarehouseRequest;
 import inventory.warehouse.service.response.WarehouseResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @RequiredArgsConstructor
 @Transactional
@@ -42,8 +43,16 @@ public class WarehouseService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
     }
 
-    public List<Warehouse> findAll() {
-        return warehouseRepository.findAll();
+    public Page<WarehouseResponse> findAllWithConditions(
+            String nameContains,
+            String postcodeContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        WarehouseSearchCondition condition = new WarehouseSearchCondition(
+                nameContains, postcodeContains, active
+        );
+        return warehouseRepository.findWarehouseSummaries(condition, pageable);
     }
 
     public WarehouseResponse update(Long id, UpdateWarehouseRequest request) {

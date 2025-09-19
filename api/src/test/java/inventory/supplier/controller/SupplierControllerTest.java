@@ -2,22 +2,23 @@ package inventory.supplier.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
+import inventory.supplier.domain.Supplier;
+import inventory.supplier.service.SupplierService;
 import inventory.supplier.service.request.CreateSupplierRequest;
 import inventory.supplier.service.request.UpdateSupplierRequest;
 import inventory.supplier.service.response.SupplierResponse;
-import inventory.supplier.domain.Supplier;
-import inventory.supplier.service.SupplierService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -128,12 +129,19 @@ class SupplierControllerTest {
                 .managerContact("01012345678")
                 .build();
 
-        when(supplierService.findAll()).thenReturn(List.of(SupplierResponse.from(supplier)));
+        Page<SupplierResponse> page = new PageImpl<>(
+                java.util.List.of(SupplierResponse.from(supplier)), Pageable.ofSize(10), 1
+        );
+        when(supplierService.findAllWithConditions(
+                any(), any(), any(), any(Pageable.class)
+        )).thenReturn(page);
 
         // when & then
         mockMvc.perform(get(BASE_URL)
-                        .param("currentPageNumber", "0")
-                        .param("pageSize", "10"))
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "createdAt")
+                        .param("sortDir", "desc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.currentPageNumber").value(0))
