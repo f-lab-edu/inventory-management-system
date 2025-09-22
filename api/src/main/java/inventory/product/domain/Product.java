@@ -1,16 +1,25 @@
 package inventory.product.domain;
 
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@Entity
 public class Product {
 
-    private static final AtomicLong ID_GENERATOR = new AtomicLong();
-    public static final String THUMBNAIL_DEFAULT_PNG = "thumbnail/default.png";
+    private static final String THUMBNAIL_DEFAULT_PNG = "thumbnail/default.png";
 
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
     private Long productId;
 
     private Long supplierId;
@@ -23,18 +32,28 @@ public class Product {
 
     private String thumbnailUrl;
 
-    private boolean active;
+    private boolean active = true;
 
     @Builder
-    public Product(Long productId, Long supplierId, String productName, String productCode, String unit,
+    public Product(Long supplierId, String productName, String productCode, String unit,
                    String thumbnailUrl, boolean active) {
-        this.productId = productId != null ? productId : ID_GENERATOR.getAndIncrement();
         this.supplierId = supplierId;
         this.productName = productName;
         this.productCode = productCode;
         this.unit = unit;
         this.thumbnailUrl = thumbnailUrl != null ? thumbnailUrl : THUMBNAIL_DEFAULT_PNG;
         this.active = active;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public Product update(Product updateProduct) {
+        this.productName = updateProduct.productName;
+        this.thumbnailUrl = updateProduct.thumbnailUrl;
+        this.active = updateProduct.active;
+        return this;
     }
 
     @Override

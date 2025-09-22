@@ -55,7 +55,6 @@ class WarehouseControllerTest {
         );
 
         Warehouse savedWarehouse = Warehouse.builder()
-                .warehouseId(1L)
                 .name("테스트용 창고")
                 .postcode("12345")
                 .baseAddress("서울시 용산구 청파로 40")
@@ -87,7 +86,6 @@ class WarehouseControllerTest {
         // given
         Long warehouseId = 1L;
         Warehouse warehouse = Warehouse.builder()
-                .warehouseId(warehouseId)
                 .name("테스트 창고")
                 .postcode("12345")
                 .baseAddress("서울시 어딘가")
@@ -115,7 +113,6 @@ class WarehouseControllerTest {
     void searchWarehouseWithSuccess() throws Exception {
         // given
         Warehouse warehouse = Warehouse.builder()
-                .warehouseId(1L)
                 .name("테스트 창고")
                 .postcode("12345")
                 .baseAddress("서울시 어딘가")
@@ -152,7 +149,6 @@ class WarehouseControllerTest {
         );
 
         Warehouse updatedWarehouse = Warehouse.builder()
-                .warehouseId(warehouseId)
                 .name("수정된창고")
                 .postcode("54321")
                 .baseAddress("수정주소")

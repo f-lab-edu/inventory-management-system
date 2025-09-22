@@ -1,15 +1,5 @@
 package inventory.product.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.product.controller.request.CreateProductRequest;
@@ -25,6 +15,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = ProductController.class)
 @Import(GlobalExceptionHandler.class)
@@ -50,7 +47,6 @@ class ProductControllerTest {
         );
 
         Product savedProduct = Product.builder()
-                .productId(1L)
                 .supplierId(1L)
                 .productName("테스트 상품")
                 .productCode("PROD001")
@@ -82,7 +78,6 @@ class ProductControllerTest {
         // given
         Long productId = 1L;
         Product product = Product.builder()
-                .productId(productId)
                 .supplierId(1L)
                 .productName("테스트 상품")
                 .productCode("PROD001")
@@ -109,7 +104,6 @@ class ProductControllerTest {
     void searchProductWithSuccess() throws Exception {
         // given
         Product product = Product.builder()
-                .productId(1L)
                 .supplierId(1L)
                 .productName("테스트 상품")
                 .productCode("PROD001")
@@ -137,11 +131,10 @@ class ProductControllerTest {
         // given
         Long productId = 1L;
         UpdateProductRequest request = new UpdateProductRequest(
-                "수정된 상품명", "https://example.com/new-thumbnail.jpg", false
+                "수정된 상품명", "https://example.com/new-thumbnail.jpg"
         );
 
         Product updatedProduct = Product.builder()
-                .productId(productId)
                 .supplierId(1L)
                 .productName("수정된 상품명")
                 .productCode("PROD001")
@@ -184,7 +177,6 @@ class ProductControllerTest {
         );
 
         Product savedProduct = Product.builder()
-                .productId(1L)
                 .supplierId(1L)
                 .productName("테스트 상품")
                 .productCode("PROD001")
