@@ -2,25 +2,30 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.product.controller.request.CreateProductRequest;
-import inventory.product.controller.request.UpdateProductRequest;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
+import inventory.product.service.query.ProductSearchCondition;
+import inventory.product.service.request.CreateProductRequest;
+import inventory.product.service.request.UpdateProductRequest;
+import inventory.product.service.response.ProductResponse;
+import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
 
-    public Product save(CreateProductRequest request) {
-        supplierRepository.findById(request.supplierId())
+    public ProductResponse save(CreateProductRequest request) {
+        Supplier supplier = supplierRepository.findById(request.supplierId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         Product product = Product.builder()
@@ -31,50 +36,55 @@ public class ProductService {
                 .thumbnailUrl(request.thumbnailUrl())
                 .build();
 
-        return productRepository.save(product);
+        return ProductResponse.from(productRepository.save(product), supplier);
     }
 
-    public Product findById(Long id) {
+    @Transactional(readOnly = true)
+    public ProductResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        return productRepository.findById(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Supplier supplier = supplierRepository.findById(product.getSupplierId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        return ProductResponse.from(product, supplier);
     }
 
-    public List<Product> findAll() {
-        return productRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> findAllWithConditions(
+            Long supplierId,
+            String productNameContains,
+            String productCodeContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        ProductSearchCondition condition = new ProductSearchCondition(
+                supplierId, productNameContains, productCodeContains, active
+        );
+        return productRepository.findProductSummaries(condition, pageable);
     }
 
-    public Product update(Long id, UpdateProductRequest request) {
+    public ProductResponse update(Long id, UpdateProductRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
+        Product existingProduct = productRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Supplier supplier = supplierRepository.findById(existingProduct.getSupplierId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        Product existingProduct = findById(id);
-
-        Product updateProduct = Product.builder()
-                .supplierId(existingProduct.getSupplierId())
-                .productCode(existingProduct.getProductCode())
-                .unit(existingProduct.getUnit())
-                .productName(request.productName() != null ? request.productName() : existingProduct.getProductName())
-                .thumbnailUrl(request.thumbnailUrl() != null ? request.thumbnailUrl() : existingProduct.getThumbnailUrl())
-                .build();
-
-        return existingProduct.update(updateProduct);
+        return ProductResponse.from(existingProduct.update(request.productName(), request.thumbnailUrl()), supplier);
     }
 
     public void deleteById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        if (!productRepository.findById(id).isPresent()) {
-            throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
-        }
-
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        product.softDelete();
     }
 }
 

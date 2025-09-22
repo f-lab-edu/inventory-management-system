@@ -2,13 +2,13 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.product.controller.request.CreateProductRequest;
-import inventory.product.controller.request.UpdateProductRequest;
+import inventory.product.service.request.CreateProductRequest;
+import inventory.product.service.request.UpdateProductRequest;
+import inventory.product.service.response.ProductResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
-import inventory.supplier.controller.request.CreateSupplierRequest;
 import inventory.supplier.domain.Supplier;
-import inventory.supplier.service.SupplierService;
+import inventory.supplier.repository.SupplierRepository;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,26 +29,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProductServiceTest {
 
     @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
     private ProductService productService;
 
     @Autowired
-    private SupplierService supplierService;
+    private ProductRepository productRepository;
+
+    @Autowired
+    private SupplierRepository supplierRepository;
 
     private Supplier createTestSupplier(String name, String businessRegistrationNumber) {
-        CreateSupplierRequest supplierRequest = new CreateSupplierRequest(
-                name,
-                businessRegistrationNumber,
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "김수용",
-                "김매니저",
-                "01012345678"
-        );
-        return supplierService.save(supplierRequest);
+        Supplier supplier = Supplier.builder()
+                .name(name)
+                .businessRegistrationNumber(businessRegistrationNumber)
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .ceoName("대표")
+                .managerName("매니저")
+                .managerContact("01012345678")
+                .build();
+        return supplierRepository.save(supplier);
     }
 
     @DisplayName("상품 생성을 성공하면 저장된 상품 정보를 반환한다")
@@ -57,27 +59,20 @@ class ProductServiceTest {
         
         CreateProductRequest request = new CreateProductRequest(
                 testSupplier.getSupplierId(),
-                "테스트 상품",
+                "상품상품",
                 "PROD001",
                 "개",
                 "https://example.com/thumbnail.jpg"
         );
 
         // when
-        Product result = productService.save(request);
+        ProductResponse result = productService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getProductId()).isNotNull();
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId());
-        assertThat(result.getProductName()).isEqualTo("테스트 상품");
-        assertThat(result.getProductCode()).isEqualTo("PROD001");
-        assertThat(result.getUnit()).isEqualTo("개");
-        assertThat(result.getThumbnailUrl()).isEqualTo("https://example.com/thumbnail.jpg");
-
-        Product savedProduct = productRepository.findById(result.getProductId()).orElse(null);
-        assertThat(savedProduct).isNotNull();
-        assertThat(savedProduct.getProductName()).isEqualTo("테스트 상품");
+        assertThat(result)
+                .extracting("supplierName", "productName", "productCode")
+                .containsExactlyInAnyOrder("테스트 공급업체", "상품상품", "PROD001");
     }
 
     @DisplayName("null 썸네일 URL로 상품 생성을 성공하면 저장된 상품 정보를 반환한다")
@@ -95,16 +90,11 @@ class ProductServiceTest {
         );
 
         // when
-        Product result = productService.save(request);
+        ProductResponse result = productService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getThumbnailUrl()).isEqualTo("thumbnail/default.png"); // 기본값으로 설정됨
-
-        // 데이터베이스에서 실제로 저장되었는지 확인
-        Product savedProduct = productRepository.findById(result.getProductId()).orElse(null);
-        assertThat(savedProduct).isNotNull();
-        assertThat(savedProduct.getThumbnailUrl()).isEqualTo("thumbnail/default.png");
+        assertThat(result.thumbnailUrl()).isEqualTo("thumbnail/default.png"); // 기본값으로 설정됨
     }
 
     @DisplayName("빈 썸네일 URL로 상품 생성을 성공하면 저장된 상품 정보를 반환한다")
@@ -122,15 +112,11 @@ class ProductServiceTest {
         );
 
         // when
-        Product result = productService.save(request);
+        ProductResponse result = productService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getThumbnailUrl()).isEmpty();
-
-        Product savedProduct = productRepository.findById(result.getProductId()).orElse(null);
-        assertThat(savedProduct).isNotNull();
-        assertThat(savedProduct.getThumbnailUrl()).isEmpty();
+        assertThat(result.thumbnailUrl()).isEmpty();
     }
 
     @DisplayName("상품 ID로 조회를 성공하면 해당 상품 정보를 반환한다")
@@ -146,17 +132,17 @@ class ProductServiceTest {
                 "개",
                 "https://example.com/thumbnail.jpg"
         );
-        Product savedProduct = productService.save(request);
-        Long productId = savedProduct.getProductId();
+        ProductResponse savedProduct = productService.save(request);
+        Long productId = savedProduct.productId();
 
         // when
-        Product result = productService.findById(productId);
+        ProductResponse result = productService.findById(productId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getProductId()).isEqualTo(productId);
-        assertThat(result.getProductName()).isEqualTo("조회 테스트 상품");
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId());
+        assertThat(result.productId()).isEqualTo(productId);
+        assertThat(result.productName()).isEqualTo("조회 테스트 상품");
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId());
     }
 
     @DisplayName("존재하지 않는 상품 ID로 조회 시 예외가 발생한다")
@@ -180,7 +166,7 @@ class ProductServiceTest {
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
     }
 
-    @DisplayName("전체 상품 조회를 성공하면 상품 목록을 반환한다")
+    @DisplayName("QueryDSL 조건 기반 상품 목록 조회를 성공하면 페이징 결과를 반환한다")
     @Test
     void findAllWithSuccess() {
         // given
@@ -207,12 +193,14 @@ class ProductServiceTest {
         productService.save(request2);
 
         // when
-        List<Product> result = productService.findAll();
+        Page<ProductResponse> page = productService.findAllWithConditions(
+                null, null, null, null, PageRequest.of(0, 10)
+        );
 
         // then
-        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(p -> p.getProductName().equals("상품1"))).isTrue();
-        assertThat(result.stream().anyMatch(p -> p.getProductName().equals("상품2"))).isTrue();
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent().stream().anyMatch(p -> p.productName().equals("상품1"))).isTrue();
+        assertThat(page.getContent().stream().anyMatch(p -> p.productName().equals("상품2"))).isTrue();
     }
 
     @DisplayName("상품 정보 수정을 성공하면 수정된 상품 정보를 반환한다")
@@ -228,8 +216,8 @@ class ProductServiceTest {
                 "개",
                 "https://example.com/old-thumbnail.jpg"
         );
-        Product savedProduct = productService.save(createRequest);
-        Long productId = savedProduct.getProductId();
+        ProductResponse savedProduct = productService.save(createRequest);
+        Long productId = savedProduct.productId();
 
         UpdateProductRequest updateRequest = new UpdateProductRequest(
                 "수정된 상품명",
@@ -237,22 +225,16 @@ class ProductServiceTest {
         );
 
         // when
-        Product result = productService.update(productId, updateRequest);
+        ProductResponse result = productService.update(productId, updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getProductId()).isEqualTo(productId);
-        assertThat(result.getProductName()).isEqualTo("수정된 상품명");
-        assertThat(result.getThumbnailUrl()).isEqualTo("https://example.com/new-thumbnail.jpg");
-        assertThat(result.isActive()).isFalse();
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
-        assertThat(result.getProductCode()).isEqualTo("PROD004"); // 업데이트되지 않음
-        assertThat(result.getUnit()).isEqualTo("개"); // 업데이트되지 않음
-
-        Product updatedProduct = productRepository.findById(productId).orElse(null);
-        assertThat(updatedProduct).isNotNull();
-        assertThat(updatedProduct.getProductName()).isEqualTo("수정된 상품명");
-        assertThat(updatedProduct.isActive()).isFalse();
+        assertThat(result.productId()).isEqualTo(productId);
+        assertThat(result.productName()).isEqualTo("수정된 상품명");
+        assertThat(result.thumbnailUrl()).isEqualTo("https://example.com/new-thumbnail.jpg");
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
+        assertThat(result.productCode()).isEqualTo("PROD004"); // 업데이트되지 않음
+        assertThat(result.unit()).isEqualTo("개"); // 업데이트되지 않음
     }
 
     @DisplayName("부분 수정을 성공하면 기존 값과 수정된 값이 함께 반환된다")
@@ -268,8 +250,8 @@ class ProductServiceTest {
                 "개",
                 "https://example.com/thumbnail.jpg"
         );
-        Product savedProduct = productService.save(createRequest);
-        Long productId = savedProduct.getProductId();
+        ProductResponse savedProduct = productService.save(createRequest);
+        Long productId = savedProduct.productId();
 
         UpdateProductRequest updateRequest = new UpdateProductRequest(
                 "수정 상품명",
@@ -277,12 +259,12 @@ class ProductServiceTest {
         );
 
         // when
-        productService.update(productId, updateRequest);
+        ProductResponse response = productService.update(productId, updateRequest);
 
         // then
-        Product updatedProduct = productRepository.findById(productId).orElse(null);
-        assertThat(updatedProduct).isNotNull();
-        assertThat(updatedProduct.getProductName()).isEqualTo("수정 상품명");
+        assertThat(response).isNotNull();
+        assertThat(response.productName()).isEqualTo("수정 상품명");
+        assertThat(response.productCode()).isEqualTo("PROD009");
     }
 
     @DisplayName("존재하지 않는 상품 수정 시 예외가 발생한다")
@@ -329,14 +311,16 @@ class ProductServiceTest {
                 "개",
                 "https://example.com/thumbnail.jpg"
         );
-        Product savedProduct = productService.save(request);
-        Long productId = savedProduct.getProductId();
+        ProductResponse savedProduct = productService.save(request);
+        Long productId = savedProduct.productId();
 
         // when
         productService.deleteById(productId);
 
         // then
-        assertThat(productRepository.findById(productId)).isEmpty();
+        Product product = productRepository.findById(productId).orElse(null);
+        assertThat(product).isNotNull();
+        assertThat(product.isDeleted()).isTrue();
     }
 
     @DisplayName("존재하지 않는 상품 삭제 시 예외가 발생한다")

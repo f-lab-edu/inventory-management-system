@@ -8,10 +8,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
 public class Supplier {
@@ -38,6 +41,14 @@ public class Supplier {
 
     private boolean active = true;
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime modifiedAt;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
+
     @Builder
     public Supplier(String name, String businessRegistrationNumber, String postcode,
                     String baseAddress, String detailAddress, String ceoName, String managerName,
@@ -50,16 +61,24 @@ public class Supplier {
         this.ceoName = ceoName;
         this.managerName = managerName;
         this.managerContact = managerContact;
+        this.createdAt = LocalDateTime.now();
+        this.modifiedAt = LocalDateTime.now();
     }
 
-    public Supplier update(Supplier updateSupplier) {
-        this.postcode = updateSupplier.postcode;
-        this.baseAddress = updateSupplier.baseAddress;
-        this.detailAddress = updateSupplier.detailAddress;
-        this.ceoName = updateSupplier.ceoName;
-        this.managerName = updateSupplier.managerName;
-        this.managerContact = updateSupplier.managerContact;
+    public Supplier update(String postcode, String baseAddress, String detailAddress, String ceoName, String managerName, String managerContact) {
+        this.postcode = postcode;
+        this.baseAddress = baseAddress;
+        this.detailAddress = detailAddress;
+        this.ceoName = ceoName;
+        this.managerName = managerName;
+        this.managerContact = managerContact;
+        this.modifiedAt = LocalDateTime.now();
         return this;
+    }
+
+    public void softDelete() {
+        deleted = true;
+        deletedAt = LocalDateTime.now();
     }
 
     @Override

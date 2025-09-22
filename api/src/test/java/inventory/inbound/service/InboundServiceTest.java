@@ -2,26 +2,30 @@ package inventory.inbound.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.inbound.controller.request.CreateInboundRequest;
-import inventory.inbound.controller.request.InboundProductRequest;
-import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.domain.Inbound;
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundRepository;
-import inventory.product.controller.request.CreateProductRequest;
+import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.InboundProductRequest;
+import inventory.inbound.service.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.response.InboundResponse;
+import inventory.inbound.service.response.InboundSummaryResponse;
 import inventory.product.domain.Product;
-import inventory.product.service.ProductService;
-import inventory.supplier.controller.request.CreateSupplierRequest;
+import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
-import inventory.supplier.service.SupplierService;
-import inventory.warehouse.controller.request.CreateWarehouseRequest;
+import inventory.supplier.repository.SupplierRepository;
 import inventory.warehouse.domain.Warehouse;
-import inventory.warehouse.service.WarehouseService;
+import inventory.warehouse.domain.WarehouseStock;
+import inventory.warehouse.repository.WarehouseRepository;
+import inventory.warehouse.repository.WarehouseStockRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
@@ -36,55 +40,60 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InboundServiceTest {
 
     @Autowired
-    private InboundRepository inboundRepository;
-
-    @Autowired
     private InboundService inboundService;
 
     @Autowired
-    private WarehouseService warehouseService;
+    private InboundRepository inboundRepository;
 
     @Autowired
-    private SupplierService supplierService;
+    private WarehouseRepository warehouseRepository;
 
     @Autowired
-    private ProductService productService;
+    private SupplierRepository supplierRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private WarehouseStockRepository warehouseStockRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private Warehouse createTestWarehouse(String name) {
-        CreateWarehouseRequest warehouseRequest = new CreateWarehouseRequest(
-                name,
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "관리자",
-                "01012345678"
-        );
-        return warehouseService.save(warehouseRequest);
+        Warehouse warehouse = Warehouse.builder()
+                .name(name)
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .managerName("관리자")
+                .managerContact("01012345678")
+                .build();
+        return warehouseRepository.save(warehouse);
     }
 
     private Supplier createTestSupplier(String name, String businessRegistrationNumber) {
-        CreateSupplierRequest supplierRequest = new CreateSupplierRequest(
-                name,
-                businessRegistrationNumber,
-                "12345",
-                "서울시 어딘가",
-                "상세주소",
-                "대표",
-                "매니저",
-                "01012345678"
-        );
-        return supplierService.save(supplierRequest);
+        Supplier supplier = Supplier.builder()
+                .name(name)
+                .businessRegistrationNumber(businessRegistrationNumber)
+                .postcode("12345")
+                .baseAddress("서울시 어딘가")
+                .detailAddress("상세주소")
+                .ceoName("대표")
+                .managerName("매니저")
+                .managerContact("01012345678")
+                .build();
+        return supplierRepository.save(supplier);
     }
 
     private Product createTestProduct(Long supplierId, String productName, String productCode) {
-        CreateProductRequest productRequest = new CreateProductRequest(
-                supplierId,
-                productName,
-                productCode,
-                "개",
-                "https://example.com/thumbnail.jpg"
-        );
-        return productService.save(productRequest);
+        Product product = Product.builder()
+                .supplierId(supplierId)
+                .productName(productName)
+                .productCode(productCode)
+                .unit("개")
+                .build();
+        return productRepository.save(product);
     }
 
     @DisplayName("입고 생성을 성공하면 저장된 입고 정보를 반환한다")
@@ -99,7 +108,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(
                         new InboundProductRequest(testProduct1.getProductId(), 10),
                         new InboundProductRequest(testProduct2.getProductId(), 20)
@@ -107,24 +116,20 @@ class InboundServiceTest {
         );
 
         // when
-        Inbound result = inboundService.save(request);
+        InboundResponse result = inboundService.save(request);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isNotNull();
-        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId());
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId());
-        assertThat(result.getExpectedDate()).isEqualTo(LocalDate.of(2024, 1, 15));
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
-        assertThat(result.getProducts()).hasSize(2);
-        assertThat(result.getProducts().get(0).productId()).isEqualTo(testProduct1.getProductId());
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
-        assertThat(result.getProducts().get(1).productId()).isEqualTo(testProduct2.getProductId());
-        assertThat(result.getProducts().get(1).quantity()).isEqualTo(20);
-
-        Inbound savedInbound = inboundRepository.findById(result.getInboundId()).orElse(null);
-        assertThat(savedInbound).isNotNull();
-        assertThat(savedInbound.getStatus()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.inboundId()).isNotNull();
+        assertThat(result.warehouseId()).isEqualTo(testWarehouse.getWarehouseId());
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId());
+        assertThat(result.expectedDate()).isEqualTo(LocalDate.now());
+        assertThat(result.status()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.products()).hasSize(2);
+        assertThat(result.products().get(0).productId()).isEqualTo(testProduct1.getProductId());
+        assertThat(result.products().get(0).quantity()).isEqualTo(10);
+        assertThat(result.products().get(1).productId()).isEqualTo(testProduct2.getProductId());
+        assertThat(result.products().get(1).quantity()).isEqualTo(20);
     }
 
     @DisplayName("존재하지 않는 창고로 입고 생성 시 예외가 발생한다")
@@ -137,7 +142,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 999L, // 존재하지 않는 창고 ID
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
 
@@ -158,7 +163,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 999L, // 존재하지 않는 공급업체 ID
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
 
@@ -178,7 +183,7 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(999L, 10)) // 존재하지 않는 상품 ID
         );
 
@@ -199,21 +204,21 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(request);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.inboundId();
 
         // when
-        Inbound result = inboundService.findById(inboundId);
+        InboundResponse result = inboundService.findById(inboundId);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isEqualTo(inboundId);
-        assertThat(result.getProducts()).hasSize(1);
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10);
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.REGISTERED);
+        assertThat(result.inboundId()).isEqualTo(inboundId);
+        assertThat(result.products()).hasSize(1);
+        assertThat(result.products().get(0).quantity()).isEqualTo(10);
+        assertThat(result.status()).isEqualTo(InboundStatus.REGISTERED);
     }
 
     @DisplayName("존재하지 않는 입고 ID로 조회 시 예외가 발생한다")
@@ -237,9 +242,9 @@ class InboundServiceTest {
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
     }
 
-    @DisplayName("전체 입고 조회를 성공하면 입고 목록을 반환한다")
+    @DisplayName("목록 조회를 성공하면 페이징된 결과를 반환한다")
     @Test
-    void findAllWithSuccess() {
+    void findAllWithConditionsWithSuccess() {
         // given
         Warehouse testWarehouse1 = createTestWarehouse("전체 조회 창고1");
         Warehouse testWarehouse2 = createTestWarehouse("전체 조회 창고2");
@@ -251,14 +256,14 @@ class InboundServiceTest {
         CreateInboundRequest request1 = new CreateInboundRequest(
                 testWarehouse1.getWarehouseId(),
                 testSupplier1.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct1.getProductId(), 10))
         );
 
         CreateInboundRequest request2 = new CreateInboundRequest(
                 testWarehouse2.getWarehouseId(),
                 testSupplier2.getSupplierId(),
-                LocalDate.of(2024, 1, 16),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct2.getProductId(), 20))
         );
 
@@ -266,12 +271,13 @@ class InboundServiceTest {
         inboundService.save(request2);
 
         // when
-        List<Inbound> result = inboundService.findAll();
+        Page<InboundSummaryResponse> page = inboundService.findAllWithConditions(
+                null, null, null, null, null, PageRequest.of(0, 10)
+        );
 
         // then
-        assertThat(result).hasSizeGreaterThanOrEqualTo(2);
-        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 15)))).isTrue();
-        assertThat(result.stream().anyMatch(i -> i.getExpectedDate().equals(LocalDate.of(2024, 1, 16)))).isTrue();
+        assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
+        assertThat(page.getContent()).isNotEmpty();
     }
 
     @DisplayName("입고 상태 수정을 성공하면 수정된 입고 정보를 반환한다")
@@ -285,25 +291,25 @@ class InboundServiceTest {
         CreateInboundRequest createRequest = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(createRequest);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.inboundId();
 
         UpdateInboundStatusRequest updateRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
 
         // when
-        Inbound result = inboundService.updateStatus(inboundId, updateRequest);
+        InboundResponse result = inboundService.updateStatus(inboundId, updateRequest);
 
         // then
         assertThat(result).isNotNull();
-        assertThat(result.getInboundId()).isEqualTo(inboundId);
-        assertThat(result.getStatus()).isEqualTo(InboundStatus.INSPECTING);
-        assertThat(result.getWarehouseId()).isEqualTo(testWarehouse.getWarehouseId()); // 업데이트되지 않음
-        assertThat(result.getSupplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
-        assertThat(result.getProducts()).hasSize(1); // 업데이트되지 않음
-        assertThat(result.getProducts().get(0).quantity()).isEqualTo(10); // 업데이트되지 않음
+        assertThat(result.inboundId()).isEqualTo(inboundId);
+        assertThat(result.status()).isEqualTo(InboundStatus.INSPECTING);
+        assertThat(result.warehouseId()).isEqualTo(testWarehouse.getWarehouseId()); // 업데이트되지 않음
+        assertThat(result.supplierId()).isEqualTo(testSupplier.getSupplierId()); // 업데이트되지 않음
+        assertThat(result.products()).hasSize(1); // 업데이트되지 않음
+        assertThat(result.products().get(0).quantity()).isEqualTo(10); // 업데이트되지 않음
 
         Inbound updatedInbound = inboundRepository.findById(inboundId).orElse(null);
         assertThat(updatedInbound).isNotNull();
@@ -346,17 +352,20 @@ class InboundServiceTest {
         CreateInboundRequest request = new CreateInboundRequest(
                 testWarehouse.getWarehouseId(),
                 testSupplier.getSupplierId(),
-                LocalDate.of(2024, 1, 15),
+                LocalDate.now(),
                 List.of(new InboundProductRequest(testProduct.getProductId(), 10))
         );
-        Inbound savedInbound = inboundService.save(request);
-        Long inboundId = savedInbound.getInboundId();
+        InboundResponse savedInbound = inboundService.save(request);
+        Long inboundId = savedInbound.inboundId();
 
         // when
         inboundService.deleteById(inboundId);
 
         // then
-        assertThat(inboundRepository.findById(inboundId)).isEmpty();
+        Inbound inbound = inboundRepository.findById(inboundId)
+                .orElse(null);
+        assertThat(inbound).isNotNull();
+        assertThat(inbound.isDeleted()).isTrue();
     }
 
     @DisplayName("존재하지 않는 입고 삭제 시 예외가 발생한다")
@@ -378,5 +387,207 @@ class InboundServiceTest {
         assertThatThrownBy(() -> inboundService.deleteById(null))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_INPUT);
+    }
+
+    @DisplayName("입고 완료 시 기존 상품의 재고가 증가한다")
+    @Test
+    void updateStatusToCompletedIncreasesExistingStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("재고 증가 테스트 창고");
+        Supplier testSupplier = createTestSupplier("재고 증가 테스트 공급업체", "1234567898");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "재고 증가 테스트 상품", "PROD010");
+
+        // 기존 재고 생성 (수량 50)
+        WarehouseStock existingStock = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct.getProductId())
+                .quantity(50)
+                .safetyStock(10)
+                .build();
+        warehouseStockRepository.save(existingStock);
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 30))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.inboundId();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 재고 확인
+        WarehouseStock updatedStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(updatedStock).isNotNull();
+        assertThat(updatedStock.getQuantity()).isEqualTo(80); // 50 + 30
+        assertThat(updatedStock.getSafetyStock()).isEqualTo(10); // 안전재고는 변경되지 않음
+    }
+
+    @DisplayName("입고 완료 시 새로운 상품의 재고가 생성된다")
+    @Test
+    void updateStatusToCompletedCreatesNewStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("신규 재고 테스트 창고");
+        Supplier testSupplier = createTestSupplier("신규 재고 테스트 공급업체", "1234567899");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "신규 재고 테스트 상품", "PROD011");
+
+        // 기존 재고가 없는 상태에서 시작
+        assertThat(warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId()))
+                .isEmpty();
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 25))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.inboundId();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 새로운 재고 생성 확인
+        WarehouseStock newStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(newStock).isNotNull();
+        assertThat(newStock.getQuantity()).isEqualTo(25); // 입고 수량과 동일
+        assertThat(newStock.getSafetyStock()).isEqualTo(0); // 기본 안전재고 0
+    }
+
+    @DisplayName("입고 완료 시 여러 상품의 재고가 동시에 업데이트된다")
+    @Test
+    void updateStatusToCompletedUpdatesMultipleProducts() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("다중 재고 테스트 창고");
+        Supplier testSupplier = createTestSupplier("다중 재고 테스트 공급업체", "1234567900");
+        Product testProduct1 = createTestProduct(testSupplier.getSupplierId(), "다중 재고 테스트 상품1", "PROD012");
+        Product testProduct2 = createTestProduct(testSupplier.getSupplierId(), "다중 재고 테스트 상품2", "PROD013");
+
+        // 첫 번째 상품은 기존 재고 있음 (수량 100)
+        WarehouseStock existingStock1 = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct1.getProductId())
+                .quantity(100)
+                .safetyStock(20)
+                .build();
+        warehouseStockRepository.save(existingStock1);
+
+        // 두 번째 상품은 기존 재고 없음
+        assertThat(warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct2.getProductId()))
+                .isEmpty();
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(
+                        new InboundProductRequest(testProduct1.getProductId(), 40), // 기존 재고 증가
+                        new InboundProductRequest(testProduct2.getProductId(), 60)  // 신규 재고 생성
+                )
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.inboundId();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 완료로 상태 변경
+        UpdateInboundStatusRequest completedRequest = new UpdateInboundStatusRequest(InboundStatus.COMPLETED);
+        InboundResponse result = inboundService.updateStatus(inboundId, completedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.COMPLETED);
+
+        // 첫 번째 상품 재고 확인 (기존 재고 증가)
+        WarehouseStock updatedStock1 = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct1.getProductId())
+                .orElse(null);
+
+        assertThat(updatedStock1).isNotNull();
+        assertThat(updatedStock1.getQuantity()).isEqualTo(140); // 100 + 40
+        assertThat(updatedStock1.getSafetyStock()).isEqualTo(20); // 안전재고 유지
+
+        // 두 번째 상품 재고 확인 (신규 재고 생성)
+        WarehouseStock newStock2 = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct2.getProductId())
+                .orElse(null);
+
+        assertThat(newStock2).isNotNull();
+        assertThat(newStock2.getQuantity()).isEqualTo(60); // 입고 수량과 동일
+        assertThat(newStock2.getSafetyStock()).isEqualTo(0); // 기본 안전재고 0
+    }
+
+    @DisplayName("입고 거절 시 재고는 변경되지 않는다")
+    @Test
+    void updateStatusToRejectedDoesNotChangeStock() {
+        // given
+        Warehouse testWarehouse = createTestWarehouse("재고 미변경 테스트 창고");
+        Supplier testSupplier = createTestSupplier("재고 미변경 테스트 공급업체", "1234567901");
+        Product testProduct = createTestProduct(testSupplier.getSupplierId(), "재고 미변경 테스트 상품", "PROD014");
+
+        // 기존 재고 생성 (수량 30)
+        WarehouseStock existingStock = WarehouseStock.builder()
+                .warehouseId(testWarehouse.getWarehouseId())
+                .productId(testProduct.getProductId())
+                .quantity(30)
+                .safetyStock(5)
+                .build();
+        warehouseStockRepository.save(existingStock);
+
+        CreateInboundRequest createRequest = new CreateInboundRequest(
+                testWarehouse.getWarehouseId(),
+                testSupplier.getSupplierId(),
+                LocalDate.now(),
+                List.of(new InboundProductRequest(testProduct.getProductId(), 20))
+        );
+        InboundResponse savedInbound = inboundService.save(createRequest);
+        Long inboundId = savedInbound.inboundId();
+
+        // 검수 중으로 상태 변경
+        UpdateInboundStatusRequest inspectingRequest = new UpdateInboundStatusRequest(InboundStatus.INSPECTING);
+        inboundService.updateStatus(inboundId, inspectingRequest);
+
+        // when - 입고 거절로 상태 변경
+        UpdateInboundStatusRequest rejectedRequest = new UpdateInboundStatusRequest(InboundStatus.REJECTED);
+        InboundResponse result = inboundService.updateStatus(inboundId, rejectedRequest);
+
+        // then
+        assertThat(result.status()).isEqualTo(InboundStatus.REJECTED);
+
+        // 재고가 변경되지 않았는지 확인
+        WarehouseStock unchangedStock = warehouseStockRepository
+                .findByWarehouseIdAndProductId(testWarehouse.getWarehouseId(), testProduct.getProductId())
+                .orElse(null);
+
+        assertThat(unchangedStock).isNotNull();
+        assertThat(unchangedStock.getQuantity()).isEqualTo(30); // 기존 재고 유지
+        assertThat(unchangedStock.getSafetyStock()).isEqualTo(5); // 안전재고 유지
     }
 }

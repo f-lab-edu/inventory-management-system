@@ -1,12 +1,33 @@
 package inventory.inbound.domain;
 
-import inventory.inbound.controller.request.InboundProductRequest;
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-@Embeddable
-public record InboundProduct(Long productId, Integer quantity) {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
+@Entity
+public class InboundProduct {
 
-    public static InboundProduct from(InboundProductRequest request) {
-        return new InboundProduct(request.productId(), request.quantity());
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    private Long inboundProductId;
+
+    private Long productId;
+
+    private Long inboundId;
+
+    private int quantity;
+
+    @Builder
+    public InboundProduct(Long productId, Long inboundId, int quantity) {
+        this.productId = productId;
+        this.inboundId = inboundId;
+        this.quantity = quantity;
     }
 }

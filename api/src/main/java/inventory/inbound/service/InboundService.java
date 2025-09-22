@@ -2,95 +2,238 @@ package inventory.inbound.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.inbound.controller.request.CreateInboundRequest;
-import inventory.inbound.controller.request.UpdateInboundStatusRequest;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
-import inventory.inbound.enums.InboundStatus;
+import inventory.inbound.domain.enums.InboundStatus;
+import inventory.inbound.repository.InboundProductRepository;
+import inventory.inbound.repository.InboundQueryRepository.InboundSearchCondition;
 import inventory.inbound.repository.InboundRepository;
+import inventory.inbound.service.request.CreateInboundRequest;
+import inventory.inbound.service.request.InboundProductRequest;
+import inventory.inbound.service.request.UpdateInboundStatusRequest;
+import inventory.inbound.service.response.InboundProductResponse;
+import inventory.inbound.service.response.InboundResponse;
+import inventory.inbound.service.response.InboundSummaryResponse;
+import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
+import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
+import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.repository.WarehouseRepository;
-import java.util.List;
+import inventory.warehouse.service.WarehouseStockService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class InboundService {
 
     private final InboundRepository inboundRepository;
+    private final InboundProductRepository inboundProductRepository;
+    //    private final InboundQueryRepository inboundQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
+    private final WarehouseStockService warehouseStockService;
 
-    public Inbound save(CreateInboundRequest request) {
-        warehouseRepository.findById(request.warehouseId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    public InboundResponse save(CreateInboundRequest request) {
+        Warehouse warehouse = validateAndGetWarehouse(request.warehouseId());
+        Supplier supplier = validateAndGetSupplier(request.supplierId());
+        validateProducts(request.products());
 
-        supplierRepository.findById(request.supplierId())
-                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        Inbound savedInbound = createAndSaveInbound(request);
+        saveInboundProducts(savedInbound.getInboundId(), request.products());
 
-        request.products().forEach(productRequest -> {
-            productRepository.findById(productRequest.productId())
-                    .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        });
-
-        List<InboundProduct> inboundProducts = request.products().stream()
-                .map(InboundProduct::from)
-                .toList();
-
-        Inbound inbound = Inbound.builder()
-                .warehouseId(request.warehouseId())
-                .supplierId(request.supplierId())
-                .expectedDate(request.expectedDate())
-                .products(inboundProducts)
-                .status(InboundStatus.REGISTERED)
-                .build();
-
-        return inboundRepository.save(inbound);
+        return createInboundResponse(savedInbound, warehouse, supplier);
     }
 
-    public Inbound findById(Long id) {
+    @Transactional(readOnly = true)
+    public InboundResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        return inboundRepository.findById(id)
+        Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
+
+        return createInboundResponse(inbound, warehouse, supplier);
     }
 
+    @Transactional(readOnly = true)
+    public Page<InboundSummaryResponse> findAllWithConditions(
+            Long warehouseId,
+            Long supplierId,
+            InboundStatus status,
+            LocalDate startDate,
+            LocalDate endDate,
+            Pageable pageable
+    ) {
+        InboundSearchCondition condition = new InboundSearchCondition(warehouseId, supplierId, status, startDate, endDate);
+
+        return inboundRepository.findInboundSummaries(
+                condition, pageable
+        );
+    }
+
+    @Transactional(readOnly = true)
     public List<Inbound> findAll() {
         return inboundRepository.findAll();
     }
 
-    public Inbound updateStatus(Long id, UpdateInboundStatusRequest request) {
+    public InboundResponse updateStatus(Long id, UpdateInboundStatusRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        Inbound existingInbound = findById(id);
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        Inbound updateData = Inbound.builder()
-                .warehouseId(existingInbound.getWarehouseId())
-                .supplierId(existingInbound.getSupplierId())
-                .expectedDate(existingInbound.getExpectedDate())
-                .products(existingInbound.getProducts())
-                .status(request.status())
-                .build();
+        inbound.validateStatusTransition(inbound.getStatus(), request.status());
+        Inbound updatedInbound = inbound.updateStatus(request.status());
 
-        return existingInbound.updateStatus(updateData);
+        if (request.status() == InboundStatus.COMPLETED) {
+            updateWarehouseStockOnInboundCompletion(inbound);
+        }
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
+
+        return createInboundResponse(updatedInbound, warehouse, supplier);
+    }
+
+    public void cancelInbound(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.CANCELED);
+        inbound.updateStatus(InboundStatus.CANCELED);
+    }
+
+    public void completeInbound(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.COMPLETED);
+        Inbound updatedInbound = inbound.updateStatus(InboundStatus.COMPLETED);
+
+        updateWarehouseStockOnInboundCompletion(updatedInbound);
     }
 
     public void deleteById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
+        Inbound inbound = inboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        inbound.softDelete();
+    }
 
-        if (!inboundRepository.findById(id).isPresent()) {
+    private Warehouse validateAndGetWarehouse(Long warehouseId) {
+        return warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    }
+
+    private Supplier validateAndGetSupplier(Long supplierId) {
+        return supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+    }
+
+    private void validateProducts(List<InboundProductRequest> productRequests) {
+        List<Long> productIds = productRequests.stream()
+                .map(InboundProductRequest::productId)
+                .toList();
+
+        List<Product> products = productRepository.findByIds(productIds);
+
+        if (products.size() != productIds.size()) {
             throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
         }
+    }
 
-        inboundRepository.deleteById(id);
+    private Inbound createAndSaveInbound(CreateInboundRequest request) {
+        Inbound inbound = Inbound.builder()
+                .warehouseId(request.warehouseId())
+                .supplierId(request.supplierId())
+                .expectedDate(request.expectedDate())
+                .status(InboundStatus.REGISTERED)
+                .build();
+
+        return inboundRepository.save(inbound);
+    }
+
+    private void saveInboundProducts(Long inboundId, List<InboundProductRequest> productRequests) {
+        productRequests.forEach(productRequest -> {
+            InboundProduct inboundProduct = InboundProduct.builder()
+                    .inboundId(inboundId)
+                    .productId(productRequest.productId())
+                    .quantity(productRequest.quantity())
+                    .build();
+
+            inboundProductRepository.save(inboundProduct);
+        });
+    }
+
+    private List<InboundProductResponse> convertToInboundProductResponses(List<InboundProduct> inboundProducts) {
+        if (inboundProducts.isEmpty()) {
+            return List.of();
+        }
+        List<Long> productIds = inboundProducts.stream()
+                .map(InboundProduct::getProductId)
+                .distinct()
+                .toList();
+        List<Product> products = productRepository.findByIds(productIds);
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getProductId, p -> p));
+        return inboundProducts.stream()
+                .map(inboundProduct -> {
+                    Product product = productMap.get(inboundProduct.getProductId());
+                    if (product == null) {
+                        throw new CustomException(ExceptionCode.DATA_NOT_FOUND);
+                    }
+                    return InboundProductResponse.from(inboundProduct, product);
+                })
+                .toList();
+    }
+
+    private InboundResponse createInboundResponse(Inbound inbound, Warehouse warehouse, Supplier supplier) {
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());
+        List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
+
+        return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
+    }
+
+    private InboundResponse createInboundResponseFromInbound(Inbound inbound) {
+        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
+        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
+        return createInboundResponse(inbound, warehouse, supplier);
+    }
+
+    private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());
+
+        for (InboundProduct inboundProduct : inboundProducts) {
+            warehouseStockService.updateStockOnInbound(
+                    inbound.getWarehouseId(),
+                    inboundProduct.getProductId(),
+                    inboundProduct.getQuantity()
+            );
+        }
     }
 }

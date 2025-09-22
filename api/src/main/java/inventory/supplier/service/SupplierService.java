@@ -2,22 +2,26 @@ package inventory.supplier.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.supplier.controller.request.CreateSupplierRequest;
-import inventory.supplier.controller.request.UpdateSupplierRequest;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
+import inventory.supplier.service.query.SupplierSearchCondition;
+import inventory.supplier.service.request.CreateSupplierRequest;
+import inventory.supplier.service.request.UpdateSupplierRequest;
+import inventory.supplier.service.response.SupplierResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
+@Transactional
 @Service
 public class SupplierService {
 
     private final SupplierRepository supplierRepository;
 
-    public Supplier save(CreateSupplierRequest request) {
+    public SupplierResponse save(CreateSupplierRequest request) {
         Supplier supplier = Supplier.builder()
                 .name(request.name())
                 .businessRegistrationNumber(request.businessRegistrationNumber())
@@ -29,49 +33,50 @@ public class SupplierService {
                 .managerContact(request.managerContact())
                 .build();
 
-        return supplierRepository.save(supplier);
+        return SupplierResponse.from(supplierRepository.save(supplier));
     }
 
-    public Supplier findById(Long id) {
+    @Transactional(readOnly = true)
+    public SupplierResponse findById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        return supplierRepository.findById(id)
+        return SupplierResponse.from(supplierRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND)));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SupplierResponse> findAllWithConditions(
+            String nameContains,
+            String brnContains,
+            Boolean active,
+            Pageable pageable
+    ) {
+        SupplierSearchCondition condition = new SupplierSearchCondition(
+                nameContains, brnContains, active
+        );
+        return supplierRepository.findSupplierSummaries(condition, pageable);
+    }
+
+    public SupplierResponse update(Long id, UpdateSupplierRequest request) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Supplier existingSupplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-    }
 
-    public List<Supplier> findAll() {
-        return supplierRepository.findAll();
-    }
-
-    public Supplier update(Long id, UpdateSupplierRequest request) {
-        if (id == null) {
-            throw new CustomException(ExceptionCode.INVALID_INPUT);
-        }
-
-        Supplier existingSupplier = findById(id);
-
-        Supplier updateSupplier = Supplier.builder()
-                .name(existingSupplier.getName())
-                .businessRegistrationNumber(existingSupplier.getBusinessRegistrationNumber())
-                .postcode(request.postcode())
-                .baseAddress(request.baseAddress())
-                .detailAddress(request.detailAddress())
-                .ceoName(request.ceoName())
-                .managerName(request.managerName())
-                .managerContact(request.managerContact())
-                .build();
-
-        return existingSupplier.update(updateSupplier);
+        return SupplierResponse.from(existingSupplier.update(request.postcode(), request.baseAddress(),
+                request.detailAddress(), request.ceoName(), request.managerName(), request.managerContact()));
     }
 
     public void deleteById(Long id) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-
-        findById(id);
-        supplierRepository.deleteById(id);
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+        supplier.softDelete();
     }
 }
