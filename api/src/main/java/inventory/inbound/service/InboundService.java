@@ -39,7 +39,6 @@ public class InboundService {
 
     private final InboundRepository inboundRepository;
     private final InboundProductRepository inboundProductRepository;
-    //    private final InboundQueryRepository inboundQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
@@ -87,11 +86,6 @@ public class InboundService {
         );
     }
 
-    @Transactional(readOnly = true)
-    public List<Inbound> findAll() {
-        return inboundRepository.findAll();
-    }
-
     public InboundResponse updateStatus(Long id, UpdateInboundStatusRequest request) {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
@@ -100,7 +94,6 @@ public class InboundService {
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        inbound.validateStatusTransition(inbound.getStatus(), request.status());
         Inbound updatedInbound = inbound.updateStatus(request.status());
 
         if (request.status() == InboundStatus.COMPLETED) {
@@ -119,7 +112,6 @@ public class InboundService {
 
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.CANCELED);
         inbound.updateStatus(InboundStatus.CANCELED);
     }
 
@@ -130,7 +122,6 @@ public class InboundService {
 
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.COMPLETED);
         Inbound updatedInbound = inbound.updateStatus(InboundStatus.COMPLETED);
 
         updateWarehouseStockOnInboundCompletion(updatedInbound);
@@ -219,11 +210,6 @@ public class InboundService {
         return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
     }
 
-    private InboundResponse createInboundResponseFromInbound(Inbound inbound) {
-        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
-        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
-        return createInboundResponse(inbound, warehouse, supplier);
-    }
 
     private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
         List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());

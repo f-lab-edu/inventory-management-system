@@ -45,7 +45,6 @@ public class WarehouseStockService {
         if (existingStock != null) {
             // 기존 상품이 있으면 재고 증가
             existingStock.increaseStock(quantity);
-            warehouseStockRepository.save(existingStock);
         } else {
             // 기존 상품이 없으면 새로 등록
             WarehouseStock newStock = WarehouseStock.builder()

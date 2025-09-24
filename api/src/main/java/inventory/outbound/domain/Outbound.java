@@ -76,25 +76,6 @@ public class Outbound {
         this.modifiedAt = LocalDateTime.now();
     }
 
-    /**
-     * 주문번호 생성 규칙
-     * - 형식: OByyyyMMdd-XXXXXXXX (날짜 + 8자리 대문자/숫자)
-     * - 충돌 방지는 애플리케이션/DB 레벨 제약으로 처리하고, 엔티티는 규칙만 책임짐
-     */
-    public static String generateOrderNumber() {
-        String datePart = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-        String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-        return "OB" + datePart + "-" + randomPart;
-    }
-
-    /**
-     * 출고 예정일 설정
-     * 1. 출고 주문 생성 시간이 10시 이전이고, requestedDate가 당일이면 expectedDate도 당일로 설정
-     * 2. 출고 주문 생성 시간이 10시 이후이고, requestedDate가 당일이면 expectedDate를 익일로 설정
-     * 3. requestedDate가 당일이 아닌 경우 requestedDate를 그대로 사용
-     *
-     * @return 출고 예정일
-     */
     private LocalDate calculateExpectedDate() {
         LocalDate today = LocalDate.now();
         LocalTime currentTime = LocalTime.now();
@@ -107,6 +88,47 @@ public class Outbound {
         }
 
         return this.requestedDate;
+    }
+
+    public Outbound updateStatus(OutboundStatus newStatus) {
+        validateStatusTransition(this.outboundStatus, newStatus);
+        this.outboundStatus = newStatus;
+        this.modifiedAt = LocalDateTime.now();
+
+        if (newStatus == OutboundStatus.SHIPPED) {
+            this.shippedDate = LocalDate.now();
+        }
+
+        return this;
+    }
+
+    private void validateStatusTransition(OutboundStatus currentStatus, OutboundStatus newStatus) {
+        switch (currentStatus) {
+            case ORDERED:
+                if (newStatus != OutboundStatus.PICKING && newStatus != OutboundStatus.CANCELED) {
+                    throw new IllegalArgumentException("출고 등록 상태에서는 피킹 중 또는 취소로만 변경 가능합니다.");
+                }
+                break;
+            case PICKING:
+                if (newStatus != OutboundStatus.SHIPPED && newStatus != OutboundStatus.CANCELED) {
+                    throw new IllegalArgumentException("피킹 중 상태에서는 출고 완료 또는 취소로만 변경 가능합니다.");
+                }
+                break;
+            case SHIPPED:
+                throw new IllegalArgumentException("출고 완료 상태에서는 더 이상 상태 변경이 불가능합니다.");
+            default:
+                throw new IllegalArgumentException("알 수 없는 상태입니다.");
+        }
+    }
+
+    public boolean canBeCanceled() {
+        return this.outboundStatus == OutboundStatus.ORDERED || this.outboundStatus == OutboundStatus.PICKING;
+    }
+
+    private String generateOrderNumber() {
+        String datePart = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        return "OB" + datePart + "-" + randomPart;
     }
 
     @Override

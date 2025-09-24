@@ -9,8 +9,8 @@ import inventory.outbound.repository.OutboundProductRepository;
 import inventory.outbound.repository.OutboundRepository;
 import inventory.outbound.service.request.CreateOutboundRequest;
 import inventory.outbound.service.request.OutboundProductRequest;
-import inventory.outbound.service.response.CreateOutboundResponse;
 import inventory.outbound.service.response.OutboundProductResponse;
+import inventory.outbound.service.response.OutboundResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.warehouse.domain.Warehouse;
@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.stream.Collectors.toMap;
+
 @RequiredArgsConstructor
 @Service
 public class OutboundService {
@@ -37,7 +39,7 @@ public class OutboundService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public CreateOutboundResponse createOutbound(CreateOutboundRequest request) {
+    public OutboundResponse createOutbound(CreateOutboundRequest request) {
         // 창고를 찾는다.
         Warehouse warehouse = warehouseRepository.findById(request.warehouseId())
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "창고를 찾을 수 없습니다."));
@@ -98,19 +100,38 @@ public class OutboundService {
             outboundProductResponses.add(OutboundProductResponse.from(savedOutboundProduct, product, warehouseStock));
         }
 
-        return CreateOutboundResponse.from(savedOutbound, warehouse, outboundProductResponses);
+        return OutboundResponse.from(savedOutbound, warehouse, outboundProductResponses);
     }
 
-    private void validateStockAvailability(Long warehouseId, java.util.List<OutboundProductRequest> products) {
-        for (OutboundProductRequest productRequest : products) {
-            Product product = productRepository.findById(productRequest.productId())
-                    .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND,
-                            "상품을 찾을 수 없습니다. 상품 ID: " + productRequest.productId()));
+    private void validateStockAvailability(Long warehouseId, List<OutboundProductRequest> products) {
+        // 1. 상품 ID 목록 추출
+        List<Long> productIds = products.stream()
+                .map(OutboundProductRequest::productId)
+                .toList();
 
-            WarehouseStock warehouseStock = warehouseStockRepository
-                    .findByWarehouseIdAndProductId(warehouseId, productRequest.productId())
-                    .orElseThrow(() -> new CustomException(ExceptionCode.STOCK_NOT_FOUND,
-                            "창고에 해당 상품의 재고가 없습니다. 상품: " + product.getProductName()));
+        // 2. 상품 정보 일괄 조회
+        List<Product> productList = productRepository.findByIds(productIds);
+        Map<Long, Product> productMap = productList.stream()
+                .collect(toMap(Product::getProductId, p -> p));
+
+        // 3. 재고 정보 일괄 조회
+        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId, productIds);
+        Map<Long, WarehouseStock> stockMap = stockList.stream()
+                .collect(toMap(WarehouseStock::getProductId, s -> s));
+
+        // 4. 검증
+        for (OutboundProductRequest productRequest : products) {
+            Product product = productMap.get(productRequest.productId());
+            if (product == null) {
+                throw new CustomException(ExceptionCode.DATA_NOT_FOUND,
+                        "상품을 찾을 수 없습니다. 상품 ID: " + productRequest.productId());
+            }
+
+            WarehouseStock warehouseStock = stockMap.get(productRequest.productId());
+            if (warehouseStock == null) {
+                throw new CustomException(ExceptionCode.STOCK_NOT_FOUND,
+                        "창고에 해당 상품의 재고가 없습니다. 상품: " + product.getProductName());
+            }
 
             if (!warehouseStock.hasEnoughStock(productRequest.quantity())) {
                 throw new CustomException(ExceptionCode.INSUFFICIENT_STOCK,
@@ -120,5 +141,105 @@ public class OutboundService {
                                 productRequest.quantity()));
             }
         }
+    }
+
+    @Transactional
+    public void startPicking(Long outboundId) {
+        Outbound outbound = outboundRepository.findById(outboundId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "출고를 찾을 수 없습니다."));
+
+        outbound.updateStatus(OutboundStatus.PICKING);
+    }
+
+    @Transactional
+    public void completeOutbound(Long outboundId) {
+        Outbound outbound = outboundRepository.findById(outboundId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "출고를 찾을 수 없습니다."));
+
+        outbound.updateStatus(OutboundStatus.SHIPPED);
+
+        // 예약 재고를 실제 재고에서 차감
+        List<OutboundProduct> outboundProducts = outboundProductRepository.findByOutboundId(outboundId);
+        Map<Long, WarehouseStock> stockMap = getWarehouseStockMap(outbound.getWarehouseId(), outboundProducts);
+
+        // 재고 차감 처리
+        for (OutboundProduct outboundProduct : outboundProducts) {
+            WarehouseStock stock = stockMap.get(outboundProduct.getProductId());
+            if (stock == null) {
+                throw new CustomException(ExceptionCode.STOCK_NOT_FOUND);
+            }
+            stock.confirmShipment(outboundProduct.getRequestedQuantity());
+        }
+    }
+
+    @Transactional
+    public void cancelOutbound(Long outboundId) {
+        Outbound outbound = outboundRepository.findById(outboundId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "출고를 찾을 수 없습니다."));
+
+        if (!outbound.canBeCanceled()) {
+            throw new CustomException(ExceptionCode.INVALID_STATE, "취소할 수 없는 상태입니다.");
+        }
+
+        outbound.updateStatus(OutboundStatus.CANCELED);
+
+        // 예약 재고 해제
+        List<OutboundProduct> outboundProducts = outboundProductRepository.findByOutboundId(outboundId);
+        Map<Long, WarehouseStock> stockMap = getWarehouseStockMap(outbound.getWarehouseId(), outboundProducts);
+
+        // 예약 재고 해제 처리
+        for (OutboundProduct outboundProduct : outboundProducts) {
+            WarehouseStock stock = stockMap.get(outboundProduct.getProductId());
+            if (stock == null) {
+                throw new CustomException(ExceptionCode.STOCK_NOT_FOUND);
+            }
+            stock.releaseReservation(outboundProduct.getRequestedQuantity());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public OutboundResponse findById(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        Outbound outbound = outboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        Warehouse warehouse = warehouseRepository.findById(outbound.getWarehouseId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        List<OutboundProduct> outboundProducts = outboundProductRepository.findByOutboundId(outbound.getOutboundId());
+
+        List<Long> productIds = outboundProducts.stream()
+                .map(OutboundProduct::getProductId)
+                .toList();
+
+        Map<Long, Product> productMap = productRepository.findByIds(productIds).stream()
+                .collect(toMap(Product::getProductId, p -> p));
+
+        Map<Long, WarehouseStock> stockMap = warehouseStockRepository.findByWarehouseIdAndProductIdIn(
+                        outbound.getWarehouseId(), productIds).stream()
+                .collect(toMap(WarehouseStock::getProductId, s -> s));
+
+        List<OutboundProductResponse> outboundProductResponses = outboundProducts.stream()
+                .map(outboundProduct -> {
+                    Product product = productMap.get(outboundProduct.getProductId());
+                    WarehouseStock warehouseStock = stockMap.get(outboundProduct.getProductId());
+                    return OutboundProductResponse.from(outboundProduct, product, warehouseStock);
+                })
+                .toList();
+
+        return OutboundResponse.from(outbound, warehouse, outboundProductResponses);
+    }
+
+    private Map<Long, WarehouseStock> getWarehouseStockMap(Long warehouseId, List<OutboundProduct> outboundProducts) {
+        List<Long> productIds = outboundProducts.stream()
+                .map(OutboundProduct::getProductId)
+                .toList();
+
+        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId, productIds);
+        return stockList.stream()
+                .collect(toMap(WarehouseStock::getProductId, s -> s));
     }
 }
