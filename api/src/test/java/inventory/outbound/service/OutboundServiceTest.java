@@ -73,7 +73,7 @@ class OutboundServiceTest {
                 .baseAddress("서울시 강남구")
                 .detailAddress("테헤란로 123")
                 .managerName("김창고")
-                .managerContact("010-1234-5678")
+                .managerContact("01012345678")
                 .build();
         testWarehouse = warehouseRepository.save(testWarehouse);
 
@@ -86,7 +86,7 @@ class OutboundServiceTest {
                 .detailAddress("상세주소")
                 .ceoName("김대표")
                 .managerName("김매니저")
-                .managerContact("010-9876-5432")
+                .managerContact("01098765432")
                 .build();
         testSupplier = supplierRepository.save(testSupplier);
 
@@ -205,7 +205,7 @@ class OutboundServiceTest {
                 testWarehouse.getWarehouseId(),
                 LocalDate.now().plusDays(1),
                 "김수령인",
-                "010-1111-2222",
+                "01011112222",
                 "12345",
                 "서울시 강남구",
                 "테헤란로 456",
