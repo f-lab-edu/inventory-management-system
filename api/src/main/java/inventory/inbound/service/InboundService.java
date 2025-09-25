@@ -30,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toMap;
 
 @RequiredArgsConstructor
 @Transactional
@@ -181,15 +182,15 @@ public class InboundService {
     }
 
     private void saveInboundProducts(Long inboundId, List<InboundProductRequest> productRequests) {
-        productRequests.forEach(productRequest -> {
-            InboundProduct inboundProduct = InboundProduct.builder()
-                    .inboundId(inboundId)
-                    .productId(productRequest.productId())
-                    .quantity(productRequest.quantity())
-                    .build();
+        List<InboundProduct> inboundProducts = productRequests.stream()
+                .map(productRequest -> InboundProduct.builder()
+                        .inboundId(inboundId)
+                        .productId(productRequest.productId())
+                        .quantity(productRequest.quantity())
+                        .build())
+                .toList();
 
-            inboundProductRepository.save(inboundProduct);
-        });
+        inboundProductRepository.saveAll(inboundProducts);
     }
 
     private List<InboundProductResponse> convertToInboundProductResponses(List<InboundProduct> inboundProducts) {
@@ -202,7 +203,7 @@ public class InboundService {
                 .toList();
         List<Product> products = productRepository.findByIds(productIds);
         Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getProductId, p -> p));
+                .collect(toMap(Product::getProductId, p -> p));
         return inboundProducts.stream()
                 .map(inboundProduct -> {
                     Product product = productMap.get(inboundProduct.getProductId());

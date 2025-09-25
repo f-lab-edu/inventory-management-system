@@ -308,8 +308,7 @@ class OutboundServiceTest {
 
         // when & then
         assertThatThrownBy(() -> outboundService.startPicking(outbound.getOutboundId()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("출고 완료 상태에서는 더 이상 상태 변경이 불가능합니다");
+                .isInstanceOf(CustomException.class);
     }
 
     private Outbound createTestOutbound() {

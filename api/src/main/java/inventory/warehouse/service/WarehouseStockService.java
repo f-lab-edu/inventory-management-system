@@ -67,5 +67,4 @@ public class WarehouseStockService {
         );
         return warehouseStockQueryRepository.findWarehouseStockSummaries(condition, pageable);
     }
-
 }

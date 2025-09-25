@@ -85,14 +85,15 @@ public class Outbound {
     }
 
     private LocalDate calculateExpectedDate() {
-        LocalDate today = LocalDate.now();
-        LocalTime currentTime = LocalTime.now();
+        return calculateExpectedDate(LocalDate.now(), LocalTime.now());
+    }
 
-        if (Objects.equals(this.requestedDate, today)) {
+    public LocalDate calculateExpectedDate(LocalDate currentDate, LocalTime currentTime) {
+        if (Objects.equals(this.requestedDate, currentDate)) {
             if (currentTime.isBefore(OUTBOUND_CUTOFF_TIME)) {
-                return today;
+                return currentDate;
             }
-            return today.plusDays(1);
+            return currentDate.plusDays(1);
         }
 
         return this.requestedDate;
@@ -137,14 +138,6 @@ public class Outbound {
         String datePart = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         return "OB" + datePart + "-" + randomPart;
-    }
-
-    /**
-     * 출고 소프트 삭제
-     */
-    public void softDelete() {
-        deleted = true;
-        deletedAt = LocalDateTime.now();
     }
 
     @Override

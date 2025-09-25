@@ -2,11 +2,11 @@ package inventory.product.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.product.domain.Product;
+import inventory.product.repository.ProductRepository;
 import inventory.product.service.request.CreateProductRequest;
 import inventory.product.service.request.UpdateProductRequest;
 import inventory.product.service.response.ProductResponse;
-import inventory.product.domain.Product;
-import inventory.product.repository.ProductRepository;
 import inventory.supplier.domain.Supplier;
 import inventory.supplier.repository.SupplierRepository;
 import jakarta.transaction.Transactional;
@@ -14,11 +14,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -319,8 +317,7 @@ class ProductServiceTest {
 
         // then
         Product product = productRepository.findById(productId).orElse(null);
-        assertThat(product).isNotNull();
-        assertThat(product.isDeleted()).isTrue();
+        assertThat(product).isNull();
     }
 
     @DisplayName("존재하지 않는 상품 삭제 시 예외가 발생한다")

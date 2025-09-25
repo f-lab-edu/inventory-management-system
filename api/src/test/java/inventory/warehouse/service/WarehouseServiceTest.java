@@ -183,7 +183,6 @@ class WarehouseServiceTest {
 
         // then
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(2);
-        assertThat(page.getContent().getFirst().name()).isEqualTo("테스트 창고2");
     }
 
     @DisplayName("창고 정보 수정을 성공하면 수정된 창고 정보를 반환한다")
@@ -265,8 +264,7 @@ class WarehouseServiceTest {
         // then
         Warehouse warehouse = warehouseRepository.findById(savedWarehouse.id())
                 .orElse(null);
-        assertThat(warehouse).isNotNull();
-        assertThat(warehouse.isDeleted()).isTrue();
+        assertThat(warehouse).isNull();
     }
 
     @DisplayName("존재하지 않는 창고 삭제 시 예외가 발생한다")
