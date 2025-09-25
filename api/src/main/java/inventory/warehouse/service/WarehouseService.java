@@ -73,8 +73,10 @@ public class WarehouseService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-        Warehouse warehouse = warehouseRepository.findById(id)
+
+        warehouseRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        warehouse.softDelete();
+
+        warehouseRepository.deleteById(id);
     }
 }

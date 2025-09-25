@@ -82,9 +82,11 @@ public class ProductService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-        Product product = productRepository.findById(id)
+        
+        productRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        product.softDelete();
+        
+        productRepository.deleteById(id);
     }
 }
 

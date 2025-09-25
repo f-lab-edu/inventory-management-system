@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record CreateOutboundResponse(
+public record OutboundResponse(
         Long outboundId,
         String orderNumber,
         Long warehouseId,
@@ -26,14 +26,14 @@ public record CreateOutboundResponse(
         StockSummary stockSummary,
         LocalDateTime createdAt
 ) {
-    public static CreateOutboundResponse from(
+    public static OutboundResponse from(
             Outbound outbound,
             Warehouse warehouse,
             List<OutboundProductResponse> products
     ) {
         StockSummary summary = generateStockSummary(products);
 
-        return new CreateOutboundResponse(
+        return new OutboundResponse(
                 outbound.getOutboundId(),
                 outbound.getOrderNumber(),
                 outbound.getWarehouseId(),
