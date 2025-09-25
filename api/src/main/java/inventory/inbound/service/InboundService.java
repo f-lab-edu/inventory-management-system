@@ -6,8 +6,8 @@ import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundProductRepository;
-import inventory.inbound.repository.InboundQueryRepository.InboundSearchCondition;
 import inventory.inbound.repository.InboundRepository;
+import inventory.inbound.service.query.InboundSearchCondition;
 import inventory.inbound.service.request.CreateInboundRequest;
 import inventory.inbound.service.request.InboundProductRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
@@ -79,7 +79,11 @@ public class InboundService {
             LocalDate endDate,
             Pageable pageable
     ) {
-        InboundSearchCondition condition = new InboundSearchCondition(warehouseId, supplierId, status, startDate, endDate);
+        LocalDate defaultStartDate = startDate != null ? startDate : LocalDate.now();
+        LocalDate defaultEndDate = endDate != null ? endDate : LocalDate.now();
+
+        InboundSearchCondition condition = new InboundSearchCondition(
+                warehouseId, supplierId, status, defaultStartDate, defaultEndDate);
 
         return inboundRepository.findInboundSummaries(
                 condition, pageable
@@ -131,9 +135,16 @@ public class InboundService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-        Inbound inbound = inboundRepository.findById(id)
+
+        inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.softDelete();
+
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(id);
+        for (InboundProduct inboundProduct : inboundProducts) {
+            inboundProductRepository.deleteById(inboundProduct.getInboundProductId());
+        }
+
+        inboundRepository.deleteById(id);
     }
 
     private Warehouse validateAndGetWarehouse(Long warehouseId) {
@@ -209,7 +220,6 @@ public class InboundService {
 
         return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
     }
-
 
     private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {
         List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(inbound.getInboundId());

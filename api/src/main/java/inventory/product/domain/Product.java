@@ -8,12 +8,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE product SET deleted = true, deleted_at = NOW() WHERE product_id = ?")
 @SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
@@ -63,11 +65,6 @@ public class Product {
         this.thumbnailUrl = thumbnailUrl;
         this.modifiedAt = LocalDateTime.now();
         return this;
-    }
-
-    public void softDelete() {
-        deleted = true;
-        deletedAt = LocalDateTime.now();
     }
 
     @Override
