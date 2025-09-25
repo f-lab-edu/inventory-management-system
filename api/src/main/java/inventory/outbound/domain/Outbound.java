@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +17,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE outbound SET deleted = true, deleted_at = NOW() WHERE outbound_id = ?")
+@SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
 public class Outbound {
@@ -53,6 +57,10 @@ public class Outbound {
     private LocalDateTime createdAt;
 
     private LocalDateTime modifiedAt;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     @Builder
     public Outbound(
@@ -129,6 +137,14 @@ public class Outbound {
         String datePart = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         return "OB" + datePart + "-" + randomPart;
+    }
+
+    /**
+     * 출고 소프트 삭제
+     */
+    public void softDelete() {
+        deleted = true;
+        deletedAt = LocalDateTime.now();
     }
 
     @Override

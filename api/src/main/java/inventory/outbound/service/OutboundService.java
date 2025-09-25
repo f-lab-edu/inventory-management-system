@@ -6,11 +6,14 @@ import inventory.outbound.domain.Outbound;
 import inventory.outbound.domain.OutboundProduct;
 import inventory.outbound.domain.enums.OutboundStatus;
 import inventory.outbound.repository.OutboundProductRepository;
+import inventory.outbound.repository.OutboundQueryRepository;
 import inventory.outbound.repository.OutboundRepository;
+import inventory.outbound.service.query.OutboundSearchCondition;
 import inventory.outbound.service.request.CreateOutboundRequest;
 import inventory.outbound.service.request.OutboundProductRequest;
 import inventory.outbound.service.response.OutboundProductResponse;
 import inventory.outbound.service.response.OutboundResponse;
+import inventory.outbound.service.response.OutboundSummaryResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
 import inventory.warehouse.domain.Warehouse;
@@ -18,9 +21,12 @@ import inventory.warehouse.domain.WarehouseStock;
 import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.repository.WarehouseStockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +40,7 @@ public class OutboundService {
 
     private final OutboundRepository outboundRepository;
     private final OutboundProductRepository outboundProductRepository;
+    private final OutboundQueryRepository outboundQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final WarehouseStockRepository warehouseStockRepository;
     private final ProductRepository productRepository;
@@ -148,6 +155,27 @@ public class OutboundService {
         Outbound outbound = outboundRepository.findById(outboundId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "출고를 찾을 수 없습니다."));
 
+        if (outbound.getOutboundStatus() != OutboundStatus.ORDERED) {
+            throw new CustomException(ExceptionCode.INVALID_STATE,
+                    "출고 상태가 ORDERED가 아닙니다. 현재 상태: " + outbound.getOutboundStatus());
+        }
+
+        List<OutboundProduct> outboundProducts = outboundProductRepository.findByOutboundId(outboundId);
+
+        Map<Long, WarehouseStock> stockMap = getWarehouseStockMap(outbound.getWarehouseId(), outboundProducts);
+
+        for (OutboundProduct outboundProduct : outboundProducts) {
+            WarehouseStock stock = stockMap.get(outboundProduct.getProductId());
+            if (stock == null) {
+                throw new CustomException(ExceptionCode.STOCK_NOT_FOUND,
+                        "상품 ID " + outboundProduct.getProductId() + "의 재고를 찾을 수 없습니다.");
+            }
+
+            stock.reserve(outboundProduct.getRequestedQuantity());
+        }
+
+        warehouseStockRepository.saveAll(new ArrayList<>(stockMap.values()));
+
         outbound.updateStatus(OutboundStatus.PICKING);
     }
 
@@ -231,6 +259,38 @@ public class OutboundService {
                 .toList();
 
         return OutboundResponse.from(outbound, warehouse, outboundProductResponses);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OutboundSummaryResponse> searchOutbounds(
+            String orderNumber, Long warehouseId, OutboundStatus status,
+            LocalDate startDate, LocalDate endDate, Pageable pageable) {
+
+        LocalDate defaultStartDate = startDate != null ? startDate : LocalDate.now();
+        LocalDate defaultEndDate = endDate != null ? endDate : LocalDate.now();
+
+        OutboundSearchCondition condition = new OutboundSearchCondition(
+                orderNumber, warehouseId, status, defaultStartDate, defaultEndDate
+        );
+
+        return outboundQueryRepository.findOutboundSummaries(condition, pageable);
+    }
+
+    @Transactional
+    public void deleteOutbound(Long id) {
+        if (id == null) {
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
+        }
+
+        outboundRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
+
+        List<OutboundProduct> outboundProducts = outboundProductRepository.findByOutboundId(id);
+        for (OutboundProduct outboundProduct : outboundProducts) {
+            outboundProductRepository.deleteById(outboundProduct.getOutboundProductId());
+        }
+
+        outboundRepository.deleteById(id);
     }
 
     private Map<Long, WarehouseStock> getWarehouseStockMap(Long warehouseId, List<OutboundProduct> outboundProducts) {
