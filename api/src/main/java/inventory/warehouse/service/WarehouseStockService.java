@@ -27,27 +27,22 @@ public class WarehouseStockService {
     @Transactional
     public void updateStockOnInbound(Long warehouseId, Long productId, int quantity) {
         if (warehouseId == null || productId == null || quantity <= 0) {
-            throw new CustomException(ExceptionCode.INVALID_INPUT, "유효하지 않은 입력값입니다.");
+            throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
 
-        // 창고와 상품 존재 여부 확인
         warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "창고를 찾을 수 없습니다."));
 
         productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "상품을 찾을 수 없습니다."));
 
-        // 기존 재고 조회
         WarehouseStock existingStock = warehouseStockRepository
                 .findByWarehouseIdAndProductId(warehouseId, productId)
                 .orElse(null);
 
         if (existingStock != null) {
-            // 기존 상품이 있으면 재고 증가
             existingStock.increaseStock(quantity);
-            warehouseStockRepository.save(existingStock);
         } else {
-            // 기존 상품이 없으면 새로 등록
             WarehouseStock newStock = WarehouseStock.builder()
                     .warehouseId(warehouseId)
                     .productId(productId)
@@ -72,5 +67,4 @@ public class WarehouseStockService {
         );
         return warehouseStockQueryRepository.findWarehouseStockSummaries(condition, pageable);
     }
-
 }

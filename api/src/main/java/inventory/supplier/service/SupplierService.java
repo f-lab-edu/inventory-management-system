@@ -75,8 +75,10 @@ public class SupplierService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-        Supplier supplier = supplierRepository.findById(id)
+
+        supplierRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        supplier.softDelete();
+
+        supplierRepository.deleteById(id);
     }
 }

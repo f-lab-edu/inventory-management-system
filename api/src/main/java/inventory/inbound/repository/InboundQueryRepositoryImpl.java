@@ -5,6 +5,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.QInbound;
+import inventory.inbound.service.query.InboundSearchCondition;
 import inventory.inbound.service.response.InboundSummaryResponse;
 import inventory.supplier.domain.QSupplier;
 import inventory.warehouse.domain.QWarehouse;
@@ -25,31 +26,6 @@ public class InboundQueryRepositoryImpl implements InboundQueryRepository {
     private static final QSupplier supplier = QSupplier.supplier;
 
     private final JPAQueryFactory queryFactory;
-
-    @Override
-    public Page<Inbound> findInboundsWithConditions(
-            InboundSearchCondition condition,
-            Pageable pageable
-    ) {
-        BooleanExpression whereClause = createWhereClause(condition);
-
-        Long totalCount = queryFactory
-                .select(inbound.count())
-                .from(inbound)
-                .where(whereClause)
-                .fetchOne();
-
-        // 페이징된 데이터 조회
-        var results = queryFactory
-                .selectFrom(inbound)
-                .where(whereClause)
-                .orderBy(inbound.createdAt.desc())
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
-
-        return new PageImpl<>(results, pageable, totalCount != null ? totalCount : 0L);
-    }
 
     @Override
     public Page<InboundSummaryResponse> findInboundSummaries(

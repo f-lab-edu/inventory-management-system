@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE inbound SET deleted = true, deleted_at = NOW() WHERE inbound_id = ?")
 @SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
@@ -80,11 +82,6 @@ public class Inbound {
                 throw new CustomException(ExceptionCode.INVALID_INPUT,
                         "알 수 없는 상태입니다.");
         }
-    }
-
-    public void softDelete() {
-        deleted = true;
-        deletedAt = LocalDateTime.now();
     }
 
     @Override

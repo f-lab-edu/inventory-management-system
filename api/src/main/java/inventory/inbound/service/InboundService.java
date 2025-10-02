@@ -6,8 +6,8 @@ import inventory.inbound.domain.Inbound;
 import inventory.inbound.domain.InboundProduct;
 import inventory.inbound.domain.enums.InboundStatus;
 import inventory.inbound.repository.InboundProductRepository;
-import inventory.inbound.repository.InboundQueryRepository.InboundSearchCondition;
 import inventory.inbound.repository.InboundRepository;
+import inventory.inbound.service.query.InboundSearchCondition;
 import inventory.inbound.service.request.CreateInboundRequest;
 import inventory.inbound.service.request.InboundProductRequest;
 import inventory.inbound.service.request.UpdateInboundStatusRequest;
@@ -30,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toMap;
 
 @RequiredArgsConstructor
 @Transactional
@@ -39,7 +40,6 @@ public class InboundService {
 
     private final InboundRepository inboundRepository;
     private final InboundProductRepository inboundProductRepository;
-    //    private final InboundQueryRepository inboundQueryRepository;
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
@@ -80,16 +80,15 @@ public class InboundService {
             LocalDate endDate,
             Pageable pageable
     ) {
-        InboundSearchCondition condition = new InboundSearchCondition(warehouseId, supplierId, status, startDate, endDate);
+        LocalDate defaultStartDate = startDate != null ? startDate : LocalDate.now();
+        LocalDate defaultEndDate = endDate != null ? endDate : LocalDate.now();
+
+        InboundSearchCondition condition = new InboundSearchCondition(
+                warehouseId, supplierId, status, defaultStartDate, defaultEndDate);
 
         return inboundRepository.findInboundSummaries(
                 condition, pageable
         );
-    }
-
-    @Transactional(readOnly = true)
-    public List<Inbound> findAll() {
-        return inboundRepository.findAll();
     }
 
     public InboundResponse updateStatus(Long id, UpdateInboundStatusRequest request) {
@@ -100,7 +99,6 @@ public class InboundService {
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
-        inbound.validateStatusTransition(inbound.getStatus(), request.status());
         Inbound updatedInbound = inbound.updateStatus(request.status());
 
         if (request.status() == InboundStatus.COMPLETED) {
@@ -119,7 +117,6 @@ public class InboundService {
 
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.CANCELED);
         inbound.updateStatus(InboundStatus.CANCELED);
     }
 
@@ -130,7 +127,6 @@ public class InboundService {
 
         Inbound inbound = inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.validateStatusTransition(inbound.getStatus(), InboundStatus.COMPLETED);
         Inbound updatedInbound = inbound.updateStatus(InboundStatus.COMPLETED);
 
         updateWarehouseStockOnInboundCompletion(updatedInbound);
@@ -140,9 +136,16 @@ public class InboundService {
         if (id == null) {
             throw new CustomException(ExceptionCode.INVALID_INPUT);
         }
-        Inbound inbound = inboundRepository.findById(id)
+
+        inboundRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
-        inbound.softDelete();
+
+        List<InboundProduct> inboundProducts = inboundProductRepository.findInboundProductsByInboundId(id);
+        for (InboundProduct inboundProduct : inboundProducts) {
+            inboundProductRepository.deleteById(inboundProduct.getInboundProductId());
+        }
+
+        inboundRepository.deleteById(id);
     }
 
     private Warehouse validateAndGetWarehouse(Long warehouseId) {
@@ -179,15 +182,15 @@ public class InboundService {
     }
 
     private void saveInboundProducts(Long inboundId, List<InboundProductRequest> productRequests) {
-        productRequests.forEach(productRequest -> {
-            InboundProduct inboundProduct = InboundProduct.builder()
-                    .inboundId(inboundId)
-                    .productId(productRequest.productId())
-                    .quantity(productRequest.quantity())
-                    .build();
+        List<InboundProduct> inboundProducts = productRequests.stream()
+                .map(productRequest -> InboundProduct.builder()
+                        .inboundId(inboundId)
+                        .productId(productRequest.productId())
+                        .quantity(productRequest.quantity())
+                        .build())
+                .toList();
 
-            inboundProductRepository.save(inboundProduct);
-        });
+        inboundProductRepository.saveAll(inboundProducts);
     }
 
     private List<InboundProductResponse> convertToInboundProductResponses(List<InboundProduct> inboundProducts) {
@@ -200,7 +203,7 @@ public class InboundService {
                 .toList();
         List<Product> products = productRepository.findByIds(productIds);
         Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getProductId, p -> p));
+                .collect(toMap(Product::getProductId, p -> p));
         return inboundProducts.stream()
                 .map(inboundProduct -> {
                     Product product = productMap.get(inboundProduct.getProductId());
@@ -217,12 +220,6 @@ public class InboundService {
         List<InboundProductResponse> inboundProductResponses = convertToInboundProductResponses(inboundProducts);
 
         return InboundResponse.from(inbound, warehouse, supplier, inboundProductResponses);
-    }
-
-    private InboundResponse createInboundResponseFromInbound(Inbound inbound) {
-        Warehouse warehouse = validateAndGetWarehouse(inbound.getWarehouseId());
-        Supplier supplier = validateAndGetSupplier(inbound.getSupplierId());
-        return createInboundResponse(inbound, warehouse, supplier);
     }
 
     private void updateWarehouseStockOnInboundCompletion(Inbound inbound) {

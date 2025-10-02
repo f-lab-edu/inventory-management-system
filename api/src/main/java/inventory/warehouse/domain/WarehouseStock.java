@@ -80,10 +80,6 @@ public class WarehouseStock {
         return this.quantity - this.reservedQuantity;
     }
 
-    public boolean hasEnoughAvailableStock(int requestedQuantity) {
-        return getAvailableQuantity() >= requestedQuantity;
-    }
-
     public void reserve(int amount) {
         if (amount <= 0) {
             throw new IllegalArgumentException("예약 수량은 0보다 커야 합니다.");
