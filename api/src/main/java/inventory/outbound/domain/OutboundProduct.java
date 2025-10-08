@@ -8,8 +8,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
+import java.time.LocalDateTime;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE outbound_product SET deleted = true, deleted_at = NOW() WHERE outbound_product_id = ?")
+@SQLRestriction("deleted = false and deleted_at is null")
 @Getter
 @Entity
 public class OutboundProduct {
@@ -23,6 +29,10 @@ public class OutboundProduct {
     private Long productId;
 
     private int requestedQuantity;
+
+    private boolean deleted = false;
+
+    private LocalDateTime deletedAt;
 
     @Builder
     public OutboundProduct(Long outboundId, Long productId, int requestedQuantity) {

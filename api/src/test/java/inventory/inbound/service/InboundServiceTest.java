@@ -364,8 +364,7 @@ class InboundServiceTest {
         // then
         Inbound inbound = inboundRepository.findById(inboundId)
                 .orElse(null);
-        assertThat(inbound).isNotNull();
-        assertThat(inbound.isDeleted()).isTrue();
+        assertThat(inbound).isNull();
     }
 
     @DisplayName("존재하지 않는 입고 삭제 시 예외가 발생한다")
