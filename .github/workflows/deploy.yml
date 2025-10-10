@@ -1,0 +1,84 @@
+name: Deploy Spring Boot App to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_to_ec2:
+        description: 'EC2에 실제 배포할까요? (비용 발생)'
+        required: true
+        default: false
+        type: boolean
+      image_tag:
+        description: '배포할 이미지 태그'
+        required: true
+        default: 'latest'
+        type: string
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # 2. Docker 이미지 빌드
+      - name: Build Docker image
+        run: |
+          docker build -t my-app:${{ inputs.image_tag }} .
+          echo "Docker 이미지 빌드 완료: my-app:${{ inputs.image_tag }}"
+
+      # 3. EC2 배포 여부 확인
+      - name: Check deployment option
+        if: ${{ inputs.deploy_to_ec2 == 'true' }}
+        run: |
+          echo "EC2 배포가 선택되었습니다."
+
+      # 4. Docker Hub 로그인 (배포 시에만)
+      - name: Login to Docker Hub
+        if: ${{ inputs.deploy_to_ec2 == 'true' }}
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 5. Docker Hub에 이미지 푸시 (배포 시에만)
+      - name: Push Docker image
+        if: ${{ inputs.deploy_to_ec2 == 'true' }}
+        run: |
+          docker tag my-app:${{ inputs.image_tag }} ${{ secrets.DOCKER_USERNAME }}/my-app:${{ inputs.image_tag }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/my-app:${{ inputs.image_tag }}
+
+      # 6. docker-compose.yml EC2로 복사 (배포 시에만)
+      - name: Copy docker-compose.yml to EC2
+        if: ${{ inputs.deploy_to_ec2 == 'true' }}
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: 'docker-compose.yml'
+          target: '~/app/'
+
+      # 7. EC2에서 Compose 배포 (배포 시에만)
+      - name: Deploy on EC2
+        if: ${{ inputs.deploy_to_ec2 == 'true' }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/app
+            echo "IMAGE_TAG=${{ inputs.image_tag }}" > .env
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+            echo "EC2 배포 완료"
+
+      # 8. 배포하지 않은 경우 메시지
+      - name: Skip deployment
+        if: ${{ inputs.deploy_to_ec2 == 'false' }}
+        run: |
+          echo "EC2 배포를 건너뛰었습니다. 비용이 절약됩니다."
+          echo "실제 배포가 필요할 때는 'deploy_to_ec2'를 true로 설정하세요."
