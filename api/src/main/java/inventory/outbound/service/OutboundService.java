@@ -4,8 +4,8 @@ import static java.util.stream.Collectors.toMap;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.notification.domain.enums.NotificationType;
 import inventory.notification.service.NotificationService;
-import inventory.notification.service.request.LowStockNotiRequest;
 import inventory.notification.service.request.LowStockProduct;
 import inventory.notification.service.request.RecipientInfo;
 import inventory.outbound.domain.Outbound;
@@ -234,12 +234,12 @@ public class OutboundService {
             // 수신자 정보 생성
             RecipientInfo recipient = new RecipientInfo(
                     supplier.getManagerName(),
-                    supplier.getManagerContact()
+                    supplier.getManagerContact(),
+                    supplier.getManagerEmail()
             );
 
             // 알림 발송
-            LowStockNotiRequest lowStockNotiRequest = new LowStockNotiRequest(recipient, products);
-            notificationService.notifyLowStock(lowStockNotiRequest);
+            notificationService.sendNotification(NotificationType.LOW_STOCK, recipient, products);
         }
     }
 

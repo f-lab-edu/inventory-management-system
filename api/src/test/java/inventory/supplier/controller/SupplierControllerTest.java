@@ -1,5 +1,15 @@
 package inventory.supplier.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import inventory.common.exception.GlobalExceptionHandler;
 import inventory.supplier.domain.Supplier;
@@ -19,13 +29,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = SupplierController.class)
 @Import(GlobalExceptionHandler.class)
@@ -54,7 +57,8 @@ class SupplierControllerTest {
                 "상세주소",
                 "김수용",
                 "김매니저",
-                "01012345678"
+                "01012345678",
+                "test@test.com"
         );
         Supplier supplier = Supplier.builder()
                 .name("테스트 공급업체")
@@ -65,6 +69,7 @@ class SupplierControllerTest {
                 .ceoName("김수용")
                 .managerName("김매니저")
                 .managerContact("01012345678")
+                .managerEmail("test@test.com")
                 .build();
 
         when(supplierService.save(any(CreateSupplierRequest.class)))
@@ -73,8 +78,8 @@ class SupplierControllerTest {
         // when & then
         mockMvc.perform(
                         post(BASE_URL)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(HttpStatus.CREATED.name()))
                 .andExpect(jsonPath("$.data.name").value("테스트 공급업체"))
@@ -101,6 +106,7 @@ class SupplierControllerTest {
                 .ceoName("김수용")
                 .managerName("김매니저")
                 .managerContact("01012345678")
+                .managerEmail("test@test.com")
                 .build();
 
         when(supplierService.findById(supplierId)).thenReturn(SupplierResponse.from(supplier));
@@ -127,6 +133,7 @@ class SupplierControllerTest {
                 .ceoName("김수용")
                 .managerName("김매니저")
                 .managerContact("01012345678")
+                .managerEmail("test@test.com")
                 .build();
 
         Page<SupplierResponse> page = new PageImpl<>(
@@ -160,7 +167,8 @@ class SupplierControllerTest {
                 "수정상세",
                 "김관리",
                 "수정매니저",
-                "01098765432"
+                "01098765432",
+                "update@test.com"
         );
 
         Supplier updatedSupplier = Supplier.builder()
@@ -172,6 +180,7 @@ class SupplierControllerTest {
                 .ceoName("김관리")
                 .managerName("수정매니저")
                 .managerContact("01098765432")
+                .managerEmail("update@test.com")
                 .build();
 
         when(supplierService.update(eq(supplierId), any(UpdateSupplierRequest.class)))

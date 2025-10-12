@@ -1,10 +1,20 @@
 package inventory.notification.service;
 
-import inventory.notification.service.request.LowStockNotiRequest;
+import inventory.common.exception.CustomException;
+import inventory.common.exception.ExceptionCode;
+import inventory.notification.domain.Notification;
+import inventory.notification.domain.enums.NotificationType;
+import inventory.notification.repository.NotificationRepository;
 import inventory.notification.service.request.LowStockProduct;
 import inventory.notification.service.request.RecipientInfo;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -12,20 +22,40 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationService {
 
-    public void notifyLowStock(LowStockNotiRequest lowStockNotiRequest) {
-        RecipientInfo recipient = lowStockNotiRequest.recipient();
+    private final JavaMailSender mailSender;
+    private final NotificationRepository notificationRepository;
 
-        log.warn("========== 재고 부족 알림 ==========");
-        log.warn("수신자: {} ({})", recipient.recipientName(), recipient.recipientContact());
-        log.warn("총 {}개 상품의 재고가 안전재고 미만입니다.", lowStockNotiRequest.products().size());
+    @Value("${notification.mail.from}")
+    private String fromEmail;
 
-        for (LowStockProduct product : lowStockNotiRequest.products()) {
-            log.warn("상품: {}, 현재재고: {}, 안전재고: {}",
-                    product.productName(),
-                    product.currentStock(),
-                    product.safetyStock());
+    public void sendNotification(NotificationType notificationType, RecipientInfo recipient,
+                                 List<LowStockProduct> context) {
+        try {
+            // 이메일 발송
+            String subject = notificationType.generateSubject();
+            String content = notificationType.generateContent(recipient, context);
+            sendEmail(recipient.recipientEmail(), subject, content);
+            Notification notification = Notification.builder()
+                    .recipientName(recipient.recipientName())
+                    .recipientEmail(recipient.recipientEmail())
+                    .notificationType(notificationType)
+                    .build();
+            notificationRepository.save(notification);
+
+        } catch (MessagingException e) {
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
+    }
 
-        log.warn("=====================================");
+    private void sendEmail(String to, String subject, String content) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(fromEmail);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(content, false);
+
+        mailSender.send(message);
     }
 }
