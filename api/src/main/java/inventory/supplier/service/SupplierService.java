@@ -31,6 +31,7 @@ public class SupplierService {
                 .ceoName(request.ceoName())
                 .managerName(request.managerName())
                 .managerContact(request.managerContact())
+                .managerEmail(request.managerEmail())
                 .build();
 
         return SupplierResponse.from(supplierRepository.save(supplier));
@@ -68,7 +69,8 @@ public class SupplierService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND));
 
         return SupplierResponse.from(existingSupplier.update(request.postcode(), request.baseAddress(),
-                request.detailAddress(), request.ceoName(), request.managerName(), request.managerContact()));
+                request.detailAddress(), request.ceoName(), request.managerName(), request.managerContact(),
+                request.managerEmail()));
     }
 
     public void deleteById(Long id) {
