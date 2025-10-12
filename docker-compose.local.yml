@@ -1,0 +1,80 @@
+# 로컬 개발 환경용 Docker Compose 설정
+version: "3.8"
+
+# 서비스 정의 섹션
+services:
+  # MySQL 데이터베이스 서비스
+  mysql:
+    image: mysql:8.4.3 # MySQL 8.4.3 이미지 사용
+    container_name: inventory-mysql-local # 로컬용 컨테이너 이름
+    restart: unless-stopped # 오류 시 자동 재시작
+    environment:
+      # MySQL 루트 비밀번호 (.env 파일에서 가져오기)
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      # 데이터베이스 이름 (.env 파일에서 가져오기)
+      MYSQL_DATABASE: ${MYSQL_DATABASE_NAME}
+      # MySQL 사용자명 (.env 파일에서 가져오기)
+      MYSQL_USER: ${MYSQL_USERNAME}
+      # MySQL 사용자 비밀번호 (.env 파일에서 가져오기)
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      # 타임존 정보 스킵
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    ports:
+      - "3306:3306" # MySQL 포트 매핑
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - inventory-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
+      interval: 30s # 30초마다 체크
+      timeout: 10s # 10초 타임아웃
+      retries: 3 # 3번 재시도
+      start_period: 60s # 60초 시작 대기
+
+  inventory-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inventory-api-local # 로컬용 컨테이너 이름
+    restart: unless-stopped # 오류 시 자동 재시작
+    ports:
+      - "8080:10000" # 호스트 8080 -> 컨테이너 10000
+    environment:
+      SERVER_PORT: ${SERVER_PORT}
+      MYSQL_DATASOURCE_URL: ${MYSQL_DATASOURCE_URL}
+      MYSQL_USERNAME: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+    # MySQL 서비스가 준비된 후에 실행
+    depends_on:
+      mysql:
+        condition: service_healthy # MySQL 헬스 체크 통과 후 실행
+    networks:
+      - inventory-network # 인벤토리 네트워크 사용
+    logging:
+      # 로그 설정
+      driver: "json-file"
+      options:
+        max-size: "10m" # 로그 파일 최대 크기
+        max-file: "3" # 최대 로그 파일 개수
+
+# 볼륨 정의
+volumes:
+  mysql-data:
+    driver: local # 로컬 볼륨 사용
+
+# 네트워크 정의
+networks:
+  inventory-network:
+    driver: bridge # 브리지 네트워크 사용
