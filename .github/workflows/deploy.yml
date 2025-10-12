@@ -21,11 +21,17 @@ jobs:
     steps:
       # 1. 코드 체크아웃
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: build-artifacts
 
       # 2. Docker 이미지 빌드
       - name: Build Docker image
         run: |
+          ls -l ./build/libs/
           docker build -t my-app:${{ inputs.image_tag }} .
           echo "Docker 이미지 빌드 완료: my-app:${{ inputs.image_tag }}"
 
