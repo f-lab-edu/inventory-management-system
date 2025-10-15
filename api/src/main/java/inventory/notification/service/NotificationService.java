@@ -7,9 +7,9 @@ import inventory.notification.domain.enums.NotificationType;
 import inventory.notification.repository.NotificationRepository;
 import inventory.notification.service.request.LowStockProduct;
 import inventory.notification.service.request.RecipientInfo;
+import inventory.notification.service.util.MailTemplateGenerator;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,33 +17,30 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class NotificationService {
 
     private final JavaMailSender mailSender;
+    private final MailTemplateGenerator mailTemplateGenerator;
     private final NotificationRepository notificationRepository;
 
     @Value("${notification.mail.from}")
     private String fromEmail;
 
-    public void sendNotification(NotificationType notificationType, RecipientInfo recipient,
-                                 List<LowStockProduct> context) {
+    public void sendLowStockNotification(RecipientInfo recipient, List<LowStockProduct> products) {
         try {
-            // 이메일 발송
-            String subject = notificationType.generateSubject();
-            String content = notificationType.generateContent(recipient, context);
-            sendEmail(recipient.recipientEmail(), subject, content);
-            Notification notification = Notification.builder()
-                    .recipientName(recipient.recipientName())
-                    .recipientEmail(recipient.recipientEmail())
-                    .notificationType(notificationType)
-                    .build();
-            notificationRepository.save(notification);
+            String subject = mailTemplateGenerator.generateLowStockSubject();
+            String content = mailTemplateGenerator.generateLowStockContent(recipient, products);
 
+            sendEmail(recipient.recipientEmail(), subject, content);
+
+            saveNotification(recipient, NotificationType.LOW_STOCK);
         } catch (MessagingException e) {
-            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR, "");
         }
     }
 
@@ -57,5 +54,14 @@ public class NotificationService {
         helper.setText(content, false);
 
         mailSender.send(message);
+    }
+
+    private void saveNotification(RecipientInfo recipient, NotificationType type) {
+        Notification notification = Notification.builder()
+                .recipientName(recipient.recipientName())
+                .recipientEmail(recipient.recipientEmail())
+                .notificationType(type)
+                .build();
+        notificationRepository.save(notification);
     }
 }

@@ -1,10 +1,7 @@
 package inventory.outbound.service;
 
-import static java.util.stream.Collectors.toMap;
-
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
-import inventory.notification.domain.enums.NotificationType;
 import inventory.notification.service.NotificationService;
 import inventory.notification.service.request.LowStockProduct;
 import inventory.notification.service.request.RecipientInfo;
@@ -28,16 +25,19 @@ import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.domain.WarehouseStock;
 import inventory.warehouse.repository.WarehouseRepository;
 import inventory.warehouse.repository.WarehouseStockRepository;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static java.util.stream.Collectors.toMap;
 
 @RequiredArgsConstructor
 @Service
@@ -239,7 +239,7 @@ public class OutboundService {
             );
 
             // 알림 발송
-            notificationService.sendNotification(NotificationType.LOW_STOCK, recipient, products);
+            notificationService.sendLowStockNotification(recipient, products);
         }
     }
 
