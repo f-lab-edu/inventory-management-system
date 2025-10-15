@@ -3,12 +3,12 @@ package inventory.notification.service.util;
 import inventory.notification.service.request.LowStockProduct;
 import inventory.notification.service.request.RecipientInfo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @RequiredArgsConstructor
-@Service
+@Component
 public class MailTemplateGenerator {
 
     public String generateLowStockSubject() {

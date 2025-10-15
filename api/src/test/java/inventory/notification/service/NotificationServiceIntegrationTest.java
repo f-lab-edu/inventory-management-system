@@ -25,8 +25,8 @@ class NotificationServiceIntegrationTest {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    @Test
     @DisplayName("실제 메일 전송 테스트 - 재고 부족 알림")
+    @Test
     void sendLowStockNotification_실제메일전송() {
         // given
         RecipientInfo recipient = new RecipientInfo(
