@@ -1,5 +1,8 @@
 package inventory.supplier.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
 import inventory.supplier.service.request.CreateSupplierRequest;
@@ -13,9 +16,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ActiveProfiles("test")
 @Transactional
@@ -37,7 +37,8 @@ class SupplierServiceTest {
                 "상세주소",
                 "김수용",
                 "김매니저",
-                "01012345678"
+                "01012345678",
+                "test@test.com"
         );
 
         // when
@@ -69,7 +70,8 @@ class SupplierServiceTest {
                 null,
                 "김수용",
                 "김매니저",
-                "01012345678"
+                "01012345678",
+                "test@test.com"
         );
 
         // when
@@ -101,7 +103,8 @@ class SupplierServiceTest {
                 "",
                 "김수용",
                 "김매니저",
-                "01012345678"
+                "01012345678",
+                "test@test.com"
         );
 
         // when
@@ -133,7 +136,8 @@ class SupplierServiceTest {
                 "상세주소",
                 "김수용",
                 "김매니저",
-                "01012345678"
+                "01012345678",
+                "test@test.com"
         );
         SupplierResponse savedSupplier = supplierService.save(request);
         Long supplierId = savedSupplier.id();
@@ -187,7 +191,8 @@ class SupplierServiceTest {
                 "1호",
                 "대표1",
                 "관리자1",
-                "01011111111"
+                "01011111111",
+                "test1@test.com"
         );
 
         CreateSupplierRequest request2 = new CreateSupplierRequest(
@@ -198,7 +203,8 @@ class SupplierServiceTest {
                 "2호",
                 "대표2",
                 "관리자2",
-                "01022222222"
+                "01022222222",
+                "test2@test.com"
         );
 
         supplierService.save(request1);
@@ -227,7 +233,8 @@ class SupplierServiceTest {
                 "기존상세",
                 "기존대표",
                 "기존매니저",
-                "01012345678"
+                "01012345678",
+                "old@test.com"
         );
         SupplierResponse savedSupplier = supplierService.save(createRequest);
         Long supplierId = savedSupplier.id();
@@ -238,7 +245,8 @@ class SupplierServiceTest {
                 "수정상세",
                 "수정대표",
                 "수정매니저",
-                "01098765432"
+                "01098765432",
+                "updated@test.com"
         );
 
         // when
@@ -269,7 +277,8 @@ class SupplierServiceTest {
                 "기존상세",
                 "기존대표",
                 "기존매니저",
-                "01012345678"
+                "01012345678",
+                "old@test.com"
         );
         SupplierResponse savedSupplier = supplierService.save(createRequest);
         Long supplierId = savedSupplier.id();
@@ -280,7 +289,8 @@ class SupplierServiceTest {
                 "수정상세",
                 "기존대표",
                 "기존매니저",
-                "01012345678"
+                "01012345678",
+                "old@test.com"
         );
 
         // when
@@ -309,7 +319,8 @@ class SupplierServiceTest {
                 "수정상세",
                 "수정대표",
                 "수정매니저",
-                "01098765432"
+                "01098765432",
+                "update@test.com"
         );
 
         // when & then
@@ -328,7 +339,8 @@ class SupplierServiceTest {
                 "수정상세",
                 "수정대표",
                 "수정매니저",
-                "01098765432"
+                "01098765432",
+                "update@test.com"
         );
 
         // when & then
@@ -349,7 +361,8 @@ class SupplierServiceTest {
                 "상세주소",
                 "대표",
                 "매니저",
-                "01012345678"
+                "01012345678",
+                "delete@test.com"
         );
         SupplierResponse savedSupplier = supplierService.save(request);
         Long supplierId = savedSupplier.id();

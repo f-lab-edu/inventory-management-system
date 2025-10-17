@@ -1,5 +1,6 @@
 package inventory.supplier.service.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -21,6 +22,9 @@ public record UpdateSupplierRequest(
         String managerName,
 
         @Size(max = 30, message = "담당자명은 20자 이하여야 합니다")
-        String managerContact
+        String managerContact,
+
+        @Email(message = "유효한 이메일 주소여야 합니다")
+        String managerEmail
 ) {
 }

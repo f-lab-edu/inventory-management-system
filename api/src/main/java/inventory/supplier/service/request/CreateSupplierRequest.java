@@ -30,6 +30,9 @@ public record CreateSupplierRequest(
         String managerName,
 
         @NotBlank(message = "담당자 연락처는 필수입니다")
-        String managerContact
+        String managerContact,
+
+        @NotBlank(message = "담당자 이메일은 필수입니다")
+        String managerEmail
 ) {
 }

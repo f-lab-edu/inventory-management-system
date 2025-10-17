@@ -2,6 +2,9 @@ package inventory.outbound.service;
 
 import inventory.common.exception.CustomException;
 import inventory.common.exception.ExceptionCode;
+import inventory.notification.service.NotificationService;
+import inventory.notification.service.request.LowStockProduct;
+import inventory.notification.service.request.RecipientInfo;
 import inventory.outbound.domain.Outbound;
 import inventory.outbound.domain.OutboundProduct;
 import inventory.outbound.domain.enums.OutboundStatus;
@@ -16,6 +19,8 @@ import inventory.outbound.service.response.OutboundResponse;
 import inventory.outbound.service.response.OutboundSummaryResponse;
 import inventory.product.domain.Product;
 import inventory.product.repository.ProductRepository;
+import inventory.supplier.domain.Supplier;
+import inventory.supplier.repository.SupplierRepository;
 import inventory.warehouse.domain.Warehouse;
 import inventory.warehouse.domain.WarehouseStock;
 import inventory.warehouse.repository.WarehouseRepository;
@@ -44,6 +49,8 @@ public class OutboundService {
     private final WarehouseRepository warehouseRepository;
     private final WarehouseStockRepository warehouseStockRepository;
     private final ProductRepository productRepository;
+    private final SupplierRepository supplierRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public OutboundResponse createOutbound(CreateOutboundRequest request) {
@@ -79,7 +86,8 @@ public class OutboundService {
         }
 
         Map<Long, WarehouseStock> stockMap = new HashMap<>();
-        for (WarehouseStock warehouseStock : warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouse.getWarehouseId(), productIds)) {
+        for (WarehouseStock warehouseStock : warehouseStockRepository.findByWarehouseIdAndProductIdIn(
+                warehouse.getWarehouseId(), productIds)) {
             stockMap.put(warehouseStock.getProductId(), warehouseStock);
         }
 
@@ -122,7 +130,8 @@ public class OutboundService {
                 .collect(toMap(Product::getProductId, p -> p));
 
         // 3. 재고 정보 일괄 조회
-        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId, productIds);
+        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId,
+                productIds);
         Map<Long, WarehouseStock> stockMap = stockList.stream()
                 .collect(toMap(WarehouseStock::getProductId, s -> s));
 
@@ -191,12 +200,46 @@ public class OutboundService {
         Map<Long, WarehouseStock> stockMap = getWarehouseStockMap(outbound.getWarehouseId(), outboundProducts);
 
         // 재고 차감 처리
+        List<Long> lowStockProductIds = new ArrayList<>();
         for (OutboundProduct outboundProduct : outboundProducts) {
             WarehouseStock stock = stockMap.get(outboundProduct.getProductId());
             if (stock == null) {
                 throw new CustomException(ExceptionCode.STOCK_NOT_FOUND);
             }
             stock.confirmShipment(outboundProduct.getRequestedQuantity());
+
+            if (stock.isBelowSafetyStock()) {
+                lowStockProductIds.add(outboundProduct.getProductId());
+            }
+        }
+
+        // 재고 부족 상품이 있으면 공급업체 관리자에게 알림 발송
+        if (!lowStockProductIds.isEmpty()) {
+            List<Product> lowStockProducts = productRepository.findByIds(lowStockProductIds);
+
+            Supplier supplier = supplierRepository.findById(lowStockProducts.getFirst().getSupplierId())
+                    .orElseThrow(() -> new CustomException(ExceptionCode.DATA_NOT_FOUND, "공급업체를 찾을 수 없습니다."));
+
+            // 재고 부족 상품 정보 생성
+            List<LowStockProduct> products = new ArrayList<>();
+            for (Product product : lowStockProducts) {
+                WarehouseStock stock = stockMap.get(product.getProductId());
+                products.add(new LowStockProduct(
+                        product.getProductName(),
+                        stock.getQuantity(),
+                        stock.getSafetyStock()
+                ));
+            }
+
+            // 수신자 정보 생성
+            RecipientInfo recipient = new RecipientInfo(
+                    supplier.getManagerName(),
+                    supplier.getManagerContact(),
+                    supplier.getManagerEmail()
+            );
+
+            // 알림 발송
+            notificationService.sendLowStockNotification(recipient, products);
         }
     }
 
@@ -298,7 +341,8 @@ public class OutboundService {
                 .map(OutboundProduct::getProductId)
                 .toList();
 
-        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId, productIds);
+        List<WarehouseStock> stockList = warehouseStockRepository.findByWarehouseIdAndProductIdIn(warehouseId,
+                productIds);
         return stockList.stream()
                 .collect(toMap(WarehouseStock::getProductId, s -> s));
     }

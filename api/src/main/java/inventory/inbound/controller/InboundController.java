@@ -9,6 +9,7 @@ import inventory.inbound.service.request.UpdateInboundStatusRequest;
 import inventory.inbound.service.response.InboundResponse;
 import inventory.inbound.service.response.InboundSummaryResponse;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,9 +18,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/inbounds")
@@ -85,7 +92,8 @@ public class InboundController {
     @PutMapping("{id}/inspection")
     public ResponseEntity<ApiResponse<InboundResponse>> updateInboundStatusToInspection(
             @PathVariable Long id) {
-        InboundResponse response = inboundService.updateStatus(id, new UpdateInboundStatusRequest(InboundStatus.INSPECTING));
+        InboundResponse response = inboundService.updateStatus(id,
+                new UpdateInboundStatusRequest(InboundStatus.INSPECTING));
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
